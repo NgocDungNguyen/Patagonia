@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repair, Not Retail — Proof of Wear × Patagonia</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Swiper JS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <!-- Matter.js (Physics) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,900&family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'bone': '#F5F1E8',
+                        'pine': '#1F3A2E',
+                        'rust': '#D85A1E',
+                        'tan': '#C9A77A',
+                    },
+                    fontFamily: {
+                        'fraunces': ['Fraunces', 'serif'],
+                        'manrope': ['Manrope', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #F5F1E8; color: #1F3A2E; overflow-x: hidden; }
+        
+        /* Spec Sheet Elements */
+        .corner-bracket {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-color: #1F3A2E;
+            border-style: solid;
+            border-width: 0;
+        }
+        .cb-tl { top: -2px; left: -2px; border-top-width: 2px; border-left-width: 2px; }
+        .cb-tr { top: -2px; right: -2px; border-top-width: 2px; border-right-width: 2px; }
+        .cb-bl { bottom: -2px; left: -2px; border-bottom-width: 2px; border-left-width: 2px; }
+        .cb-br { bottom: -2px; right: -2px; border-bottom-width: 2px; border-right-width: 2px; }
+
+        .dashed-card {
+            border: 2px dashed #1F3A2E;
+            border-radius: 8px;
+            position: relative;
+            background: #F5F1E8;
+        }
+
+        .hard-shadow { box-shadow: 6px 6px 0px 0px #1F3A2E; }
+        .hard-shadow-rust { box-shadow: 6px 6px 0px 0px #D85A1E; }
+
+        /* Envelope Animation */
+        .envelope-wrap {
+            perspective: 1000px;
+        }
+        .envelope-flap {
+            transform-origin: top;
+            transition: transform 0.8s ease-in-out;
+            z-index: 10;
+        }
+        .envelope-open .envelope-flap {
+            transform: rotateX(180deg);
+        }
+        .letter {
+            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+        }
+        .envelope-open .letter {
+            transform: translateY(-150%) scale(1.1);
+            opacity: 0;
+        }
+
+        /* Carousel Styles */
+        .swiper { width: 100%; height: 100%; }
+        .swiper-slide { width: 85%; }
+
+        /* Quiz / Modal Transitions */
+        .hidden-transition {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .visible-transition {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Matter.js Container */
+        #patch-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Scrollbar hide for mobile feel */
+        ::-webkit-scrollbar { display: none; }
+        html { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="font-manrobe antialiased">
+
+    <!-- ========================================= -->
+    <!-- 00 · ENVELOPE (Entry Interaction)         -->
+    <!-- ========================================= -->
+    <div id="envelope-overlay" class="fixed inset-0 z-50 bg-bone flex flex-col items-center justify-center p-4">
+        <div class="text-center mb-8 font-mono text-xs tracking-widest text-pine/70">
+            TO: YOU · STATUS: UNOPENED
+        </div>
+        
+        <div id="envelope" class="envelope-wrap w-full max-w-md relative cursor-pointer" onclick="openEnvelope()">
+            <!-- Flap -->
+            <div class="envelope-flap absolute top-0 left-0 w-full h-1/2 bg-tan" style="clip-path: polygon(0 0, 100% 0, 50% 100%); border-bottom: 2px solid #1F3A2E;"></div>
+            
+            <!-- Body -->
+            <div class="relative w-full h-64 bg-tan border-2 border-pine hard-shadow flex items-center justify-center overflow-hidden">
+                <div class="absolute w-full top-1/2 border-t-2 border-dashed border-pine/50 transform -translate-y-1/2"></div>
+                <div class="absolute w-16 h-16 bg-rust rounded-full flex items-center justify-center text-bone font-fraunces font-bold border-2 border-pine hard-shadow">
+                    P.o.W
+                </div>
+                
+                <!-- Letter -->
+                <div class="letter absolute w-[90%] h-[90%] bg-bone border-2 border-pine p-6 flex flex-col justify-center text-center">
+                    <p class="font-fraunces text-xl text-pine leading-snug mb-4">Hey — remember that jacket you can't quite bring yourself to throw away?</p>
+                    <p class="font-manrope text-sm text-pine/80">We're not asking you to buy a new one. We're asking you to bring the old one back to life — with us.</p>
+                    <p class="mt-4 font-mono text-xs text-rust">[ TAP TO OPEN ]</p>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="skipEnvelope()" class="mt-8 font-mono text-xs text-pine/50 underline underline-offset-4 hover:text-pine">
+            skip intro
+        </button>
+    </div>
+
+
+    <!-- ========================================= -->
+    <!-- MAIN CONTENT (Revealed after Envelope)    -->
+    <!-- ========================================= -->
+    <div id="main-content" class="opacity-0 transition-opacity duration-500">
+
+        <!-- ========================================= -->
+        <!-- 01 · HERO                                 -->
+        <!-- ========================================= -->
+        <section id="hero" class="min-h-screen flex flex-col justify-center px-6 py-20 relative">
+            <div class="absolute top-6 left-6 font-mono text-xs tracking-widest text-rust">SEC_01 · HERO</div>
+            
+            <div class="max-w-4xl mx-auto w-full text-center">
+                <!-- Teaser Image (Unlock mechanic placeholder) -->
+                <div class="relative w-full h-48 mb-12 bg-pine rounded-lg overflow-hidden border-2 border-pine hard-shadow-rust">
+                    <img src="https://images.unsplash.com/photo-1551538827-9c037cb4f32a?q=80&w=600&auto=format&fit=crop" class="w-full h-full object-cover blur-md scale-110 transition-all duration-1000" id="hero-teaser">
+                    <div class="absolute inset-0 flex items-center justify-center font-mono text-bone text-sm bg-pine/30">
+                        UNLOCKS IN <span id="teaser-days" class="font-bold mx-1">T-00</span> DAYS
+                    </div>
+                </div>
+
+                <h1 class="font-fraunces text-5xl md:text-7xl font-black text-pine leading-none mb-8">
+                    New gets old.<br>
+                    <span class="text-rust italic">Old stays true.</span>
+                </h1>
+
+                <!-- Countdown -->
+                <div class="flex justify-center gap-4 md:gap-8 mb-12 font-mono">
+                    <div class="dashed-card p-4 w-20 md:w-28">
+                        <div id="cd-days" class="font-fraunces text-4xl md:text-5xl font-bold text-pine">00</div>
+                        <div class="text-xs text-pine/60 mt-1">DAYS</div>
+                    </div>
+                    <div class="dashed-card p-4 w-20 md:w-28">
+                        <div id="cd-hours" class="font-fraunces text-4xl md:text-5xl font-bold text-pine">00</div>
+                        <div class="text-xs text-pine/60 mt-1">HRS</div>
+                    </div>
+                    <div class="dashed-card p-4 w-20 md:w-28">
+                        <div id="cd-mins" class="font-fraunces text-4xl md:text-5xl font-bold text-pine">00</div>
+                        <div class="text-xs text-pine/60 mt-1">MIN</div>
+                    </div>
+                    <div class="dashed-card p-4 w-20 md:w-28">
+                        <div id="cd-secs" class="font-fraunces text-4xl md:text-5xl font-bold text-pine">00</div>
+                        <div class="text-xs text-pine/60 mt-1">SEC</div>
+                    </div>
+                </div>
+
+                <button class="bg-rust text-bone font-manrope font-bold uppercase tracking-wider px-12 py-4 border-2 border-pine hard-shadow hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all">
+                    I'm in
+                </button>
+            </div>
+        </section>
+
+        <!-- ========================================= -->
+        <!-- 02 · WHAT THIS IS                         -->
+        <!-- ========================================= -->
+        <section id="what" class="px-6 py-20 bg-pine text-bone">
+            <div class="max-w-3xl mx-auto">
+                <div class="font-mono text-xs tracking-widest text-rust mb-4">SEC_02 · CONTEXT</div>
+                <h2 class="font-fraunces text-4xl md:text-5xl font-bold mb-8">What this actually is.</h2>
+                <p class="font-manrope text-lg md:text-xl leading-relaxed text-bone/90">
+                    It’s a repair event. But really, it’s a love letter to the things we refuse to throw away. Bring that jacket, those jeans, the backpack holding on by a thread. No pressure to buy. Just bring the item, sit at a table, and keep your full story — no need to trade it for something new.
+                </p>
+            </div>
+        </section>
+
+        <!-- ========================================= -->
+        <!-- 03 · CAROUSEL                             -->
+        <!-- ========================================= -->
+        <section id="activities" class="px-6 py-20 relative">
+            <div class="max-w-5xl mx-auto">
+                <div class="flex justify-between items-end mb-12">
+                    <div>
+                        <div class="font-mono text-xs tracking-widest text-rust mb-4">SEC_03 · JOURNEY</div>
+                        <h2 class="font-fraunces text-4xl md:text-5xl font-bold text-pine">What you'll do.</h2>
+                    </div>
+                    <div class="hidden md:flex gap-2">
+                        <button id="swiper-prev" class="w-12 h-12 border-2 border-pine rounded-full flex items-center justify-center hover:bg-pine hover:text-bone transition-colors">←</button>
+                        <button id="swiper-next" class="w-12 h-12 border-2 border-pine rounded-full flex items-center justify-center hover:bg-pine hover:text-bone transition-colors">→</button>
+                    </div>
+                </div>
+
+                <div class="swiper">
+                    <div class="swiper-wrapper">
+                        <!-- Slide 1 -->
+                        <div class="swiper-slide">
+                            <div class="dashed-card p-8 h-80 flex flex-col justify-between hard-shadow cursor-pointer" onclick="openModal('Mending + Storytelling Tables', 'Sit at the table that matches your story.', 'We have 4 tables: Vết Tích (The Mark), Bạn Đồng Hành (The Companion), Đường Đi (The Journey), and Đời Thường (The Everyday). Pick the one that fits your item best. What does "done" look like? A patched hole and a great conversation.')">
+                                <div>
+                                    <div class="font-mono text-xs text-rust mb-4">01/04</div>
+                                    <h3 class="font-fraunces text-2xl font-bold text-pine mb-2">Mending + Storytelling</h3>
+                                    <p class="font-manrope text-pine/80">Sit at the table that matches your story.</p>
+                                </div>
+                                <div class="font-mono text-xs text-pine underline underline-offset-4">VIEW DETAILS →</div>
+                            </div>
+                        </div>
+                        <!-- Slide 2 -->
+                        <div class="swiper-slide">
+                            <div class="dashed-card p-8 h-80 flex flex-col justify-between hard-shadow cursor-pointer" onclick="openModal('Repair Quest', 'You can\'t solve this alone. That\'s the point.', 'Four stations. Four puzzles. You and your team need to hit each station to figure out how to save the "sample" item. It takes communication and a bit of sweat. Win the quest, win a prize.')">
+                                <div>
+                                    <div class="font-mono text-xs text-rust mb-4">02/04</div>
+                                    <h3 class="font-fraunces text-2xl font-bold text-pine mb-2">Repair Quest</h3>
+                                    <p class="font-manrope text-pine/80">You can't solve this alone. That's the point.</p>
+                                </div>
+                                <div class="font-mono text-xs text-pine underline underline-offset-4">VIEW DETAILS →</div>
+                            </div>
+                        </div>
+                        <!-- Slide 3 -->
+                        <div class="swiper-slide">
+                            <div class="dashed-card p-8 h-80 flex flex-col justify-between hard-shadow cursor-pointer" onclick="openModal('Voice-Memo Booth', 'Your voice becomes part of the item forever.', 'Step into the booth. Hit record. Tell us the story of what you brought. We\'ll stitch that audio to a QR code and sew it right onto your item. Scan it years from now to hear yourself.')">
+                                <div>
+                                    <div class="font-mono text-xs text-rust mb-4">03/04</div>
+                                    <h3 class="font-fraunces text-2xl font-bold text-pine mb-2">Voice-Memo Booth</h3>
+                                    <p class="font-manrope text-pine/80">Your voice becomes part of the item forever.</p>
+                                </div>
+                                <div class="font-mono text-xs text-pine underline underline-offset-4">VIEW DETAILS →</div>
+                            </div>
+                        </div>
+                        <!-- Slide 4 -->
+                        <div class="swiper-slide">
+                            <div class="dashed-card p-8 h-80 flex flex-col justify-between hard-shadow cursor-pointer" onclick="openModal('Limited Patch + Lucky Draw', 'Show up, you\'re already in the running.', 'We made a custom Patagonia x Proof of Wear patch. Only 50 exist. You can\'t buy them. Just by showing up, you\'re entered to win one. No purchase necessary.')">
+                                <div>
+                                    <div class="font-mono text-xs text-rust mb-4">04/04</div>
+                                    <h3 class="font-fraunces text-2xl font-bold text-pine mb-2">Limited Patch</h3>
+                                    <p class="font-manrope text-pine/80">Show up, you're already in the running.</p>
+                                </div>
+                                <div class="font-mono text-xs text-pine underline underline-offset-4">VIEW DETAILS →</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="swiper-pagination mt-8 relative"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================= -->
+        <!-- 04 · MEET THE PATCH (Matter.js)           -->
+        <!-- ========================================= -->
+        <section id="patches" class="px-6 py-20 bg-bone">
+            <div class="max-w-5xl mx-auto">
+                <div class="font-mono text-xs tracking-widest text-rust mb-4">SEC_04 · ARTIFACTS</div>
+                <h2 class="font-fraunces text-4xl md:text-5xl font-bold text-pine mb-12 text-center">Meet the Patch.</h2>
+                
+                <div class="dashed-card hard-shadow h-[60vh] min-h-[400px] mb-6 relative overflow-hidden bg-bone">
+                    <div id="patch-canvas"></div>
+                    <div class="absolute top-4 left-4 font-mono text-xs text-pine/50 pointer-events-none z-10">DRAG TO PLAY</div>
+                </div>
+
+                <div class="text-center max-w-xl mx-auto dashed-card p-6 hard-shadow-rust">
+                    <div class="font-mono text-xs text-rust mb-2">RULE_001</div>
+                    <p class="font-fraunces text-xl font-bold text-pine">Show up = one entry. No purchase necessary.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================= -->
+        <!-- 05 · VENUE                                -->
+        <!-- ========================================= -->
+        <section id="venue" class="px-6 py-20">
+            <div class="max-w-3xl mx-auto">
+                <div class="font-mono text-xs tracking-widest text-rust mb-4">SEC_05 · LOGISTICS</div>
+                <h2 class="font-fraunces text-4xl md:text-5xl font-bold text-pine mb-12">Venue & Details.</h2>
+                
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="dashed-card p-6 hard-shadow">
+                        <div class="font-mono text-xs text-pine/60 mb-2">LOCATION</div>
+                        <h3 class="font-fraunces text-2xl font-bold text-pine mb-2">The Old Warehouse</h3>
+                        <p class="text-pine/80">42 Threadbare Lane, District 3</p>
+                        
+                        <div class="font-mono text-xs text-pine/60 mt-6 mb-2">DATE & TIME</div>
+                        <h3 class="font-fraunces text-2xl font-bold text-pine mb-2">April 12, 2026</h3>
+                        <p class="text-pine/80">10:00 AM — 06:00 PM</p>
+                    </div>
+                    <div class="dashed-card p-6 hard-shadow">
+                        <div class="font-mono text-xs text-pine/60 mb-2">WHAT TO BRING</div>
+                        <ul class="font-manrope text-pine space-y-2">
+                            <li class="flex gap-2"><span class="text-rust">[X]</span> One item you want to repair.</li>
+                            <li class="flex gap-2"><span class="text-rust">[X]</span> Your friends (for the Repair Quest).</li>
+                            <li class="flex gap-2"><span class="text-rust">[X]</span> A story about the item.</li>
+                            <li class="flex gap-2"><span class="text-pine/40">[ ]</span> Money (don't bring any).</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================= -->
+        <!-- 06 · RSVP (Quiz)                          -->
+        <!-- ========================================= -->
+        <section id="rsvp" class="px-6 py-20 bg-pine text-bone">
+            <div class="max-w-3xl mx-auto text-center">
+                <div class="font-mono text-xs tracking-widest text-rust mb-4">SEC_06 · ENTRY</div>
+                <h2 class="font-fraunces text-4xl md:text-5xl font-bold mb-4">Reserve your spot.</h2>
+                <p class="text-bone/70 mb-12 max-w-md mx-auto">Take this 3-question quiz to find your storytelling table, then lock in your RSVP.</p>
+
+                <!-- Quiz Step 1 -->
+                <div id="quiz-step-1" class="dashed-card bg-bone text-pine p-8 hard-shadow-rust text-left">
+                    <div class="font-mono text-xs text-rust mb-2">QUESTION 01/03</div>
+                    <h3 class="font-fraunces text-2xl font-bold mb-6">Why do you keep old clothes?</h3>
+                    <div class="flex flex-col gap-3">
+                        <button onclick="nextQuiz(2, 'Memory Keeper')" class="border-2 border-pine p-4 text-left hover:bg-pine hover:text-bone transition-colors font-medium">It reminds me of someone or a specific moment.</button>
+                        <button onclick="nextQuiz(2, 'Realist')" class="border-2 border-pine p-4 text-left hover:bg-pine hover:text-bone transition-colors font-medium">It still works perfectly fine. Why waste it?</button>
+                        <button onclick="nextQuiz(2, 'Stylist')" class="border-2 border-pine p-4 text-left hover:bg-pine hover:text-bone transition-colors font-medium">It fits my style, and I can't find this anywhere else.</button>
+                    </div>
+                </div>
+
+                <!-- Quiz Step 2 -->
+                <div id="quiz-step-2" class="dashed-card bg-bone text-pine p-8 hard-shadow-rust text-left hidden">
+                    <div class="font-mono text-xs text-rust mb-2">QUESTION 02/03</div>
+                    <h3 class="font-fraunces text-2xl font-bold mb-6">What's your repair style?</h3>
+                    <div class="flex flex-col gap-3">
+                        <button onclick="nextQuiz(3, 'Memory Keeper')" class="border-2 border-pine p-4 text-left hover:bg-pine hover:text-bone transition-colors font-medium">Visible, golden threads. Show the history.</button>
+                        <button onclick="nextQuiz(3, 'Realist')" class="border-2 border-pine p-4 text-left hover:bg-pine hover:text-bone transition-colors font-medium">Strong, functional. Just make it last.</button>
+                        <button onclick="nextQuiz(3, 'Stylist')" class="border-2 border-pine p-4 text-left hover:bg-pine hover:text-bone transition-colors font-medium">Creative patches. Make it a statement piece.</button>
+                    </div>
+                </div>
+
+                <!-- Quiz Step 3 -->
+                <div id="quiz-step-3" class="dashed-card bg-bone text-pine p-8 hard-shadow-rust text-left hidden">
+                    <div class="font-mono text-xs text-rust mb-2">QUESTION 03/03</div>
+                    <h3 class="font-fraunces text-2xl font-bold mb-6">Who are you bringing?</h3>
+                    <div class="flex flex-col gap-3">
+                        <button onclick="finishQuiz('Memory Keeper')" class="border-2 border-pine p-4 text-left hover:bg-pine hover:text-bone transition-colors font-medium">The person who gave me the item.</button>
+                        <button onclick="finishQuiz('Realist')" class="border-2 border-pine p-4 text-left hover:bg-pine hover:text-bone transition-colors font-medium">My most practical friend.</button>
+                        <button onclick="finishQuiz('Stylist')" class="border-2 border-pine p-4 text-left hover:bg-pine hover:text-bone transition-colors font-medium">My stylish crew.</button>
+                    </div>
+                </div>
+
+                <!-- Quiz Result / Form -->
+                <div id="quiz-result" class="dashed-card bg-bone text-pine p-8 hard-shadow-rust text-left hidden">
+                    <div class="font-mono text-xs text-rust mb-2">RESULT</div>
+                    <h3 class="font-fraunces text-3xl font-black mb-2 text-pine" id="persona-result">Memory Keeper</h3>
+                    <p class="text-pine/70 mb-6 font-medium">Your suggested storytelling table is: <span id="table-result" class="text-rust font-bold">Bạn Đồng Hành</span></p>
+                    
+                    <form class="flex flex-col gap-4">
+                        <input type="text" placeholder="Your Name" class="border-2 border-pine p-3 bg-bone focus:outline-none focus:border-rust font-manrope">
+                        <input type="email" placeholder="Email Address" class="border-2 border-pine p-3 bg-bone focus:outline-none focus:border-rust font-manrope">
+                        <input type="text" placeholder="Teammate Names (Optional)" class="border-2 border-pine p-3 bg-bone focus:outline-none focus:border-rust font-manrope">
+                        <button type="button" onclick="confirmRSVP()" class="bg-rust text-bone font-bold uppercase tracking-wider p-4 mt-4 border-2 border-pine hover:translate-x-1 hover:translate-y-1 hover:shadow-none hard-shadow transition-all">
+                            Confirm RSVP
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Confirmation -->
+                <div id="quiz-confirm" class="dashed-card bg-rust text-bone p-8 hard-shadow hidden">
+                    <h3 class="font-fraunces text-4xl font-black mb-4">YOU'RE IN.</h3>
+                    <p class="text-bone/90 mb-0">Check your email for the details. See you on April 12.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================= -->
+        <!-- 07 · FAQ                                  -->
+        <!-- ========================================= -->
+        <section id="faq" class="px-6 py-20">
+            <div class="max-w-3xl mx-auto">
+                <div class="font-mono text-xs tracking-widest text-rust mb-4">SEC_07 · INFO</div>
+                <h2 class="font-fraunces text-4xl md:text-5xl font-bold text-pine mb-12">FAQ.</h2>
+                
+                <div class="space-y-4">
+                    <details class="dashed-card p-6 hard-shadow group">
+                        <summary class="font-bold text-lg cursor-pointer flex justify-between items-center">Is it free? <span class="text-rust group-open:rotate-45 transition-transform text-2xl">+</span></summary>
+                        <p class="mt-4 text-pine/80">100% free. No purchase necessary for repairs, the quest, or the lucky draw.</p>
+                    </details>
+                    <details class="dashed-card p-6 hard-shadow group">
+                        <summary class="font-bold text-lg cursor-pointer flex justify-between items-center">Do I need to bring my own item? <span class="text-rust group-open:rotate-45 transition-transform text-2xl">+</span></summary>
+                        <p class="mt-4 text-pine/80">Yes, bring one item you want to repair. We provide the thread, patches, and guidance.</p>
+                    </details>
+                    <details class="dashed-card p-6 hard-shadow group">
+                        <summary class="font-bold text-lg cursor-pointer flex justify-between items-center">What if my item can't be fixed? <span class="text-rust group-open:rotate-45 transition-transform text-2xl">+</span></summary>
+                        <p class="mt-4 text-pine/80">Our team will do their best. If it's truly unrepairable, we'll help you safely retire it and maybe repurpose the fabric into something new.</p>
+                    </details>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================= -->
+        <!-- 08 · FOOTER                               -->
+        <!-- ========================================= -->
+        <footer class="bg-pine text-bone py-16 px-6">
+            <div class="max-w-4xl mx-auto text-center">
+                <h2 class="font-fraunces text-3xl font-black mb-8">#RepairNotRetail</h2>
+                <div class="flex justify-center gap-8 mb-12 font-mono text-sm">
+                    <a href="#" class="underline underline-offset-4 hover:text-rust">INSTAGRAM</a>
+                    <a href="#" class="underline underline-offset-4 hover:text-rust">TIKTOK</a>
+                    <a href="#" class="underline underline-offset-4 hover:text-rust">WORN WEAR</a>
+                </div>
+                <div class="font-mono text-xs text-bone/40 border-t border-bone/20 pt-8">
+                    PROOF OF WEAR × PATAGONIA — PERFECT PITCH 2026<br>
+                    ALL ITEMS REMAIN YOUR PROPERTY.
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Modal Structure -->
+    <div id="modal-overlay" class="fixed inset-0 bg-pine/80 z-40 hidden-transition flex items-center justify-center p-4" onclick="closeModal()">
+        <div class="bg-bone border-2 border-rust p-8 max-w-md w-full hard-shadow relative" onclick="event.stopPropagation()">
+            <div class="corner-bracket cb-tl border-rust"></div>
+            <div class="corner-bracket cb-tr border-rust"></div>
+            <div class="corner-bracket cb-bl border-rust"></div>
+            <div class="corner-bracket cb-br border-rust"></div>
+            
+            <button onclick="closeModal()" class="absolute top-2 right-2 font-mono text-pine text-xl font-bold hover:text-rust">[X]</button>
+            <div class="font-mono text-xs text-rust mb-2" id="modal-tag">DETAILS</div>
+            <h3 class="font-fraunces text-2xl font-bold text-pine mb-4" id="modal-title">Title</h3>
+            <p class="text-pine/80 font-medium mb-4" id="modal-teaser">Teaser</p>
+            <p class="text-pine/70 text-sm" id="modal-body">Body</p>
+        </div>
+    </div>
+
+    <script>
+        // =========================================
+        // 00: ENVELOPE LOGIC
+        // =========================================
+        function openEnvelope() {
+            document.getElementById('envelope').classList.add('envelope-open');
+            setTimeout(() => {
+                document.getElementById('envelope-overlay').style.opacity = '0';
+                document.getElementById('envelope-overlay').style.pointerEvents = 'none';
+                document.getElementById('main-content').classList.remove('opacity-0');
+            }, 1200);
+        }
+        function skipEnvelope() {
+            document.getElementById('envelope-overlay').style.display = 'none';
+            document.getElementById('main-content').classList.remove('opacity-0');
+        }
+
+        // =========================================
+        // 01: COUNTDOWN LOGIC
+        // =========================================
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() + 24); // Set 24 days from now for demo
+        
+        function updateCountdown() {
+            const now = new Date();
+            const diff = targetDate - now;
+
+            if (diff <= 0) return;
+
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+            document.getElementById('cd-days').innerText = String(days).padStart(2, '0');
+            document.getElementById('cd-hours').innerText = String(hours).padStart(2, '0');
+            document.getElementById('cd-mins').innerText = String(mins).padStart(2, '0');
+            document.getElementById('cd-secs').innerText = String(secs).padStart(2, '0');
+            
+            // Unlock effect logic
+            document.getElementById('teaser-days').innerText = `T-${String(days).padStart(2, '0')}`;
+            const blurAmount = Math.max(0, days - 5); // Unblurs when < 5 days left
+            document.getElementById('hero-teaser').style.filter = `blur(${blurAmount}px)`;
+        }
+        setInterval(updateCountdown, 1000);
+        updateCountdown();
+
+        // =========================================
+        // 03: CAROUSEL LOGIC (SWIPER)
+        // =========================================
+        const swiper = new Swiper('.swiper', {
+            slidesPerView: 1.15,
+            centeredSlides: true,
+            spaceBetween: 20,
+            grabCursor: true,
+            pagination: {
+                el: '.swiper-pagination',
+                clickable: true,
+            },
+            navigation: {
+                nextEl: '#swiper-next',
+                prevEl: '#swiper-prev',
+            },
+            breakpoints: {
+                768: {
+                    slidesPerView: 1.5,
+                    spaceBetween: 30,
+                }
+            }
+        });
+
+        // Modal Logic
+        function openModal(title, teaser, body) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-teaser').innerText = teaser;
+            document.getElementById('modal-body').innerText = body;
+            document.getElementById('modal-overlay').classList.remove('hidden-transition');
+            document.getElementById('modal-overlay').classList.add('visible-transition');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeModal() {
+            document.getElementById('modal-overlay').classList.add('hidden-transition');
+            document.getElementById('modal-overlay').classList.remove('visible-transition');
+            document.body.style.overflow = 'auto';
+        }
+
+        // =========================================
+        // 04: MATTER.JS PATCHES
+        // =========================================
+        function initPatches() {
+            const { Engine, Render, World, Bodies, Mouse, MouseConstraint, Body } = Matter;
+
+            const engine = Engine.create();
+            const world = engine.world;
+
+            const canvasContainer = document.getElementById('patch-canvas');
+            const width = canvasContainer.clientWidth;
+            const height = canvasContainer.clientHeight;
+
+            const render = Render.create({
+                element: canvasContainer,
+                engine: engine,
+                options: {
+                    width: width,
+                    height: height,
+                    wireframes: false,
+                    background: '#F5F1E8'
+                }
+            });
+
+            // Walls
+            const wallOpts = { isStatic: true, render: { visible: false } };
+            World.add(world, [
+                Bodies.rectangle(width / 2, 0, width, 20, wallOpts),
+                Bodies.rectangle(width / 2, height, width, 20, wallOpts),
+                Bodies.rectangle(0, height / 2, 20, height, wallOpts),
+                Bodies.rectangle(width, height / 2, 20, height, wallOpts)
+            ]);
+
+            // Patches (Circles and Rectangles simulating patches)
+            const patchColors = ['#D85A1E', '#1F3A2E', '#C9A77A'];
+            const patches = [
+                Bodies.circle(width * 0.3, height * 0.3, 45, { 
+                    restitution: 0.8, 
+                    render: { fillStyle: patchColors[0] } 
+                }),
+                Bodies.rectangle(width * 0.7, height * 0.4, 70, 70, { 
+                    restitution: 0.8, 
+                    render: { fillStyle: patchColors[1] } 
+                }),
+                Bodies.circle(width * 0.5, height * 0.7, 35, { 
+                    restitution: 0.8, 
+                    render: { fillStyle: patchColors[2] } 
+                }),
+                Bodies.rectangle(width * 0.2, height * 0.8, 50, 50, { 
+                    restitution: 0.8, 
+                    render: { fillStyle: patchColors[1] } 
+                }),
+                 Bodies.circle(width * 0.8, height * 0.2, 40, { 
+                    restitution: 0.8, 
+                    render: { fillStyle: patchColors[0] } 
+                })
+            ];
+            
+            // Add some random initial velocity
+            patches.forEach(p => {
+                Body.setVelocity(p, { x: (Math.random() - 0.5) * 5, y: (Math.random() - 0.5) * 5 });
+                Body.setAngularVelocity(p, Math.random() * 0.1);
+            });
+
+            World.add(world, patches);
+
+            // Mouse Control
+            const mouse = Mouse.create(render.canvas);
+            const mouseConstraint = MouseConstraint.create(engine, {
+                mouse: mouse,
+                constraint: {
+                    stiffness: 0.2,
+                    render: { visible: false }
+                }
+            });
+            World.add(world, mouseConstraint);
+            render.mouse = mouse;
+
+            Engine.run(engine);
+            Render.run(render);
+
+            // Handle Resize
+            window.addEventListener('resize', () => {
+                const newWidth = canvasContainer.clientWidth;
+                const newHeight = canvasContainer.clientHeight;
+                render.canvas.width = newWidth;
+                render.canvas.height = newHeight;
+                render.options.width = newWidth;
+                render.options.height = newHeight;
+            });
+        }
+        // Initialize physics after load
+        window.addEventListener('load', initPatches);
+
+
+        // =========================================
+        // 06: RSVP QUIZ LOGIC
+        // =========================================
+        let currentPersonaScore = { 'Memory Keeper': 0, 'Realist': 0, 'Stylist': 0 };
+        let finalPersona = '';
+
+        function nextQuiz(step, persona) {
+            currentPersonaScore[persona]++;
+            document.querySelectorAll('[id^="quiz-step-"]').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`quiz-step-${step}`).classList.remove('hidden');
+        }
+
+        function finishQuiz(persona) {
+            currentPersonaScore[persona]++;
+            
+            // Determine winner
+            finalPersona = Object.keys(currentPersonaScore).reduce((a, b) => 
+                currentPersonaScore[a] > currentPersonaScore[b] ? a : b
+            );
+
+            let tableName = '';
+            if (finalPersona === 'Memory Keeper') tableName = 'Bạn Đồng Hành';
+            if (finalPersona === 'Realist') tableName = 'Đường Đi';
+            if (finalPersona === 'Stylist') tableName = 'Đời Thường';
+
+            document.getElementById('persona-result').innerText = finalPersona;
+            document.getElementById('table-result').innerText = tableName;
+            
+            document.querySelectorAll('[id^="quiz-step-"]').forEach(el => el.classList.add('hidden'));
+            document.getElementById('quiz-result').classList.remove('hidden');
+        }
+
+        function confirmRSVP() {
+            document.getElementById('quiz-result').classList.add('hidden');
+            document.getElementById('quiz-confirm').classList.remove('hidden');
+        }
+
+    </script>
+</body>
+</html>
