@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Redirecting…</title>
+</head>
+<body>
+    <p>Page not found. Redirecting…</p>
+    <script>
+        // GitHub Pages serves this file for ANY unmatched path. Its filesystem
+        // is case-sensitive, so "/admin" 404s even though "/Admin.html" exists.
+        // Rather than keep a second, differently-cased file in sync (which also
+        // can't safely coexist with "Admin.html" on a case-insensitive local
+        // filesystem like Windows/macOS), this catches the mismatch here and
+        // redirects to the correctly-cased page.
+        var knownPages = ['Admin.html', 'Badge.html', 'index.html'];
+        var path = location.pathname;
+        var dir = path.substring(0, path.lastIndexOf('/') + 1);
+        var requested = path.substring(path.lastIndexOf('/') + 1).toLowerCase();
+
+        var match = knownPages.find(function (p) {
+            var lower = p.toLowerCase();
+            return lower === requested || lower === requested + '.html';
+        });
+
+        location.replace(dir + (match || '') + location.search + location.hash);
+    </script>
+</body>
+</html>

@@ -21,7 +21,7 @@ function wireLogin() {
     const password = $("#login-password").value;
     $("#login-error").classList.add("hidden");
 
-    if (username !== "Admin") {
+    if (username.toLowerCase() !== ADMIN_EMAIL) {
       showError("Invalid username or password.");
       return;
     }

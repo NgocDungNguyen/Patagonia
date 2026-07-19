@@ -37,10 +37,10 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 
 // The one admin account, created manually in the Firebase console
-// (Authentication → Users → Add user). The "Admin" username shown in the
-// login form is cosmetic — this fixed email is what Firebase Auth actually
-// checks the password against.
-export const ADMIN_EMAIL = "admin@patagonia-a86db.firebaseapp.com";
+// (Authentication → Users → Add user). Must be created with this exact
+// lowercase email — Admin.html's login form accepts "Admin@gmail.com" in
+// any casing and lowercases it before signing in.
+export const ADMIN_EMAIL = "admin@gmail.com";
 
 export {
   collection,

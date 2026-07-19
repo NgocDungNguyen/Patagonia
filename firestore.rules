@@ -77,7 +77,7 @@ service cloud.firestore {
     // ------------------------------------------------------------
     function isAdmin() {
       return request.auth != null
-        && request.auth.token.email == 'admin@patagonia-a86db.firebaseapp.com';
+        && request.auth.token.email == 'admin@gmail.com';
     }
 
     function isCloudinaryUrl(url) {
