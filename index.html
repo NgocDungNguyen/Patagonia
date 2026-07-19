@@ -409,12 +409,14 @@
                     <p class="text-center text-pine/60 font-bold uppercase tracking-widest text-sm py-8">Loading badges…</p>
                 </div>
 
-                <div class="text-center mt-8">
-                    <button id="badge-showmore-btn" class="font-mono text-xs uppercase tracking-widest text-pine underline underline-offset-4 hover:text-rust transition-colors">Show More ↓</button>
-                </div>
-
                 <div id="badge-showmore-wrap" class="hidden mt-6 bg-tan/40 border-2 border-pine p-3 sm:p-4">
                     <div id="badge-fulllist" class="space-y-4 max-h-[420px] overflow-y-auto pr-1"></div>
+                </div>
+
+                <!-- Positioned after BOTH lists: whichever one is hidden takes zero
+                     space, so this always lands directly below the visible one. -->
+                <div class="text-center mt-8">
+                    <button id="badge-showmore-btn" class="font-mono text-xs uppercase tracking-widest text-pine underline underline-offset-4 hover:text-rust transition-colors">Show More ↓</button>
                 </div>
 
                 <div class="text-center mt-12">
