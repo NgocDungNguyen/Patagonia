@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>The Story Wall — Proof of Wear × Patagonia</title>
+    <title>The Badge I Got — Proof of Wear × Patagonia</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
@@ -44,18 +44,24 @@
 </head>
 <body class="font-manrope antialiased">
 
-    <header class="px-6 pt-12 pb-6 text-center">
-        <a href="index.html" class="font-mono text-xs text-pine/50 uppercase tracking-widest underline underline-offset-4 hover:text-rust transition-colors">← Back to Site</a>
-        <div class="font-mono text-xs tracking-widest text-rust mt-6 mb-4 uppercase">The Story Wall</div>
-        <h1 class="font-fraunces text-4xl sm:text-6xl font-black text-pine leading-none">EVERY REPAIR<br>HAS A STORY.</h1>
+    <header class="px-6 pt-16 pb-6 text-center">
+        <div class="font-mono text-xs tracking-widest text-rust mb-4 uppercase">One Person, One Patch</div>
+        <h1 class="font-fraunces text-4xl sm:text-6xl font-black text-pine leading-none">THE BADGE<br>I GOT.</h1>
+        <p class="mt-6 max-w-md mx-auto text-pine/70 font-bold">This is my proof of wear — the moment, the story, and the voice behind the patch I made mine.</p>
     </header>
 
     <!-- Carousel -->
     <section class="px-6 py-12">
         <div class="max-w-6xl mx-auto">
-            <div class="flex justify-end gap-2 mb-6">
-                <button id="carousel-prev" class="w-10 h-10 brutal-border bg-bone flex items-center justify-center hover-press font-bold">←</button>
-                <button id="carousel-next" class="w-10 h-10 brutal-border bg-rust text-bone flex items-center justify-center hover-press font-bold">→</button>
+            <div class="flex items-end justify-between mb-6 gap-4">
+                <div>
+                    <div class="font-mono text-xs tracking-widest text-rust mb-2 uppercase">The Moment</div>
+                    <h2 class="font-fraunces text-2xl sm:text-3xl font-black text-pine leading-none">Where it happened.</h2>
+                </div>
+                <div class="flex gap-2 flex-shrink-0">
+                    <button id="carousel-prev" class="w-10 h-10 brutal-border bg-bone flex items-center justify-center hover-press font-bold">←</button>
+                    <button id="carousel-next" class="w-10 h-10 brutal-border bg-rust text-bone flex items-center justify-center hover-press font-bold">→</button>
+                </div>
             </div>
             <div class="swiper">
                 <div id="carousel-wrapper" class="swiper-wrapper pb-10">
@@ -69,7 +75,8 @@
     <!-- Story -->
     <section class="px-6 py-16 bg-pine text-bone">
         <div class="max-w-2xl mx-auto text-center">
-            <div class="font-mono text-xs tracking-widest text-rust mb-4 uppercase">A Note</div>
+            <div class="font-mono text-xs tracking-widest text-rust mb-4 uppercase">In My Words</div>
+            <h2 class="font-fraunces text-2xl sm:text-3xl font-black mb-6 leading-none">Why this badge matters to me.</h2>
             <p id="story-text" class="font-fraunces italic text-xl sm:text-2xl leading-relaxed">Loading…</p>
         </div>
     </section>
@@ -77,7 +84,8 @@
     <!-- Audio -->
     <section class="px-6 py-16">
         <div class="max-w-xl mx-auto text-center">
-            <div class="font-mono text-xs tracking-widest text-rust mb-6 uppercase">A Voice</div>
+            <div class="font-mono text-xs tracking-widest text-rust mb-2 uppercase">Hear It From Me</div>
+            <h2 class="font-fraunces text-2xl sm:text-3xl font-black text-pine mb-6 leading-none">A voice note about the moment.</h2>
 
             <div id="audio-player-controls" class="bg-bone brutal-border brutal-shadow p-6 sm:p-8">
                 <canvas id="audio-visualizer" width="400" height="100" class="w-full h-[100px] mb-6"></canvas>
@@ -87,6 +95,13 @@
             <p id="audio-empty-notice" class="hidden text-pine/50 font-bold uppercase tracking-widest text-sm py-8">No voice note shared yet.</p>
         </div>
     </section>
+
+    <!-- Lightbox -->
+    <div id="media-lightbox" class="hidden fixed inset-0 bg-pine/95 z-50 items-center justify-center p-4 sm:p-8">
+        <button id="lightbox-close" class="absolute top-4 right-4 sm:top-6 sm:right-6 bg-bone text-pine brutal-border w-10 h-10 flex items-center justify-center font-black text-xl hover:bg-rust hover:text-bone transition-colors z-10">✕</button>
+        <img id="lightbox-img" class="hidden max-w-full max-h-full object-contain" alt="Full size view">
+        <video id="lightbox-video" class="hidden max-w-full max-h-full" controls playsinline></video>
+    </div>
 
     <script type="module" src="badge-page.js"></script>
 </body>

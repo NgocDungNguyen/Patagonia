@@ -14,12 +14,16 @@ async function loadMedia() {
 
   wrapper.innerHTML = items.map((m) => `
     <div class="swiper-slide">
-      <div class="brutal-border bg-bone overflow-hidden">
+      <div class="brutal-border bg-tan overflow-hidden h-[320px] sm:h-[420px] flex items-center justify-center">
         ${m.type === "video"
-          ? `<video src="${m.url}" controls playsinline class="w-full h-[320px] sm:h-[420px] object-cover bg-black"></video>`
-          : `<img src="${m.url}" class="w-full h-[320px] sm:h-[420px] object-cover" alt="Shared memory" loading="lazy">`}
+          ? `<video src="${m.url}" controls playsinline class="max-w-full max-h-full object-contain bg-black"></video>`
+          : `<img src="${m.url}" data-url="${m.url}" class="media-thumb max-w-full max-h-full object-contain cursor-pointer" alt="Shared memory" loading="lazy">`}
       </div>
     </div>`).join("");
+
+  wrapper.querySelectorAll(".media-thumb").forEach((img) => {
+    img.addEventListener("click", () => openLightbox(img.dataset.url, "image"));
+  });
 
   new Swiper(".swiper", {
     slidesPerView: 1.1,
@@ -30,6 +34,41 @@ async function loadMedia() {
     pagination: { el: ".swiper-pagination", clickable: true },
     navigation: { nextEl: "#carousel-next", prevEl: "#carousel-prev" },
     breakpoints: { 768: { slidesPerView: 1.5, spaceBetween: 40 } },
+  });
+}
+
+// ---------- Lightbox ----------
+function openLightbox(url, kind) {
+  const lightbox = $("#media-lightbox");
+  const img = $("#lightbox-img");
+  const video = $("#lightbox-video");
+  img.classList.add("hidden");
+  video.classList.add("hidden");
+  video.pause();
+  video.removeAttribute("src");
+
+  if (kind === "video") {
+    video.src = url;
+    video.classList.remove("hidden");
+  } else {
+    img.src = url;
+    img.classList.remove("hidden");
+  }
+  lightbox.classList.remove("hidden");
+  lightbox.classList.add("flex");
+}
+
+function closeLightbox() {
+  const lightbox = $("#media-lightbox");
+  lightbox.classList.add("hidden");
+  lightbox.classList.remove("flex");
+  $("#lightbox-video").pause();
+}
+
+function wireLightbox() {
+  $("#lightbox-close").addEventListener("click", closeLightbox);
+  $("#media-lightbox").addEventListener("click", (e) => {
+    if (e.target.id === "media-lightbox") closeLightbox();
   });
 }
 
@@ -103,6 +142,7 @@ async function loadAudio() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  wireLightbox();
   loadMedia();
   loadStory();
   loadAudio();

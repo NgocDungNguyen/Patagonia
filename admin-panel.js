@@ -58,7 +58,39 @@ function wireLogin() {
 // Nothing here touches Firestore/Cloudinary until "Save All Changes" is
 // clicked — everything below just builds up an in-memory draft.
 let mediaItems = []; // { id, kind: 'existing'|'new', type, url|previewUrl, publicId?, file?, removed? }
-const audioState = { existingUrl: null, existingPublicId: null, newFile: null };
+const audioState = { existingUrl: null, existingPublicId: null, newFile: null, removed: false };
+
+function renderAudioUI() {
+  const preview = $("#audio-current-preview");
+  const removeBtn = $("#audio-remove-btn");
+  const removedLabel = $("#audio-removed-label");
+  const pendingLabel = $("#audio-pending-label");
+
+  if (audioState.removed) {
+    preview.classList.add("hidden");
+    removeBtn.classList.add("hidden");
+    pendingLabel.classList.add("hidden");
+    removedLabel.classList.remove("hidden");
+    return;
+  }
+  removedLabel.classList.add("hidden");
+
+  if (audioState.newFile) {
+    preview.src = URL.createObjectURL(audioState.newFile);
+    preview.classList.remove("hidden");
+    pendingLabel.classList.remove("hidden");
+    removeBtn.classList.remove("hidden");
+  } else if (audioState.existingUrl) {
+    preview.src = audioState.existingUrl;
+    preview.classList.remove("hidden");
+    pendingLabel.classList.add("hidden");
+    removeBtn.classList.remove("hidden");
+  } else {
+    preview.classList.add("hidden");
+    pendingLabel.classList.add("hidden");
+    removeBtn.classList.add("hidden");
+  }
+}
 
 async function loadDraftState() {
   const snap = await getDocs(query(collection(db, "badgePageMedia"), orderBy("createdAt", "desc")));
@@ -71,18 +103,14 @@ async function loadDraftState() {
   audioState.existingUrl = null;
   audioState.existingPublicId = null;
   audioState.newFile = null;
-  const audioSnap = await getDoc(doc(db, "badgePageAudio", "main"));
-  const preview = $("#audio-current-preview");
-  $("#audio-pending-label").classList.add("hidden");
+  audioState.removed = false;
   $("#audio-file-input").value = "";
+  const audioSnap = await getDoc(doc(db, "badgePageAudio", "main"));
   if (audioSnap.exists() && audioSnap.data().url) {
     audioState.existingUrl = audioSnap.data().url;
     audioState.existingPublicId = audioSnap.data().publicId;
-    preview.src = audioState.existingUrl;
-    preview.classList.remove("hidden");
-  } else {
-    preview.classList.add("hidden");
   }
+  renderAudioUI();
 }
 
 // ---------- Media gallery ----------
@@ -93,8 +121,8 @@ function renderGallery() {
   gallery.innerHTML = visible.map((m) => {
     const src = m.kind === "new" ? m.previewUrl : m.url;
     const media = m.type === "video"
-      ? `<video src="${src}" muted></video>`
-      : `<img src="${src}" alt="Media">`;
+      ? `<video src="${src}" class="gallery-preview-trigger" data-src="${src}" data-kind="video" muted></video>`
+      : `<img src="${src}" class="gallery-preview-trigger" data-src="${src}" data-kind="image" alt="Media">`;
     return `
       <div class="gallery-tile">
         ${media}
@@ -106,6 +134,44 @@ function renderGallery() {
   $("#media-add-tile").addEventListener("click", () => $("#media-file-input").click());
   gallery.querySelectorAll(".gallery-remove-btn").forEach((btn) => {
     btn.addEventListener("click", () => removeMediaItem(btn.dataset.id));
+  });
+  gallery.querySelectorAll(".gallery-preview-trigger").forEach((el) => {
+    el.addEventListener("click", () => openLightbox(el.dataset.src, el.dataset.kind));
+  });
+}
+
+// ---------- Lightbox (preview before saving) ----------
+function openLightbox(url, kind) {
+  const lightbox = $("#media-lightbox");
+  const img = $("#lightbox-img");
+  const video = $("#lightbox-video");
+  img.classList.add("hidden");
+  video.classList.add("hidden");
+  video.pause();
+  video.removeAttribute("src");
+
+  if (kind === "video") {
+    video.src = url;
+    video.classList.remove("hidden");
+  } else {
+    img.src = url;
+    img.classList.remove("hidden");
+  }
+  lightbox.classList.remove("hidden");
+  lightbox.classList.add("flex");
+}
+
+function closeLightbox() {
+  const lightbox = $("#media-lightbox");
+  lightbox.classList.add("hidden");
+  lightbox.classList.remove("flex");
+  $("#lightbox-video").pause();
+}
+
+function wireLightbox() {
+  $("#lightbox-close").addEventListener("click", closeLightbox);
+  $("#media-lightbox").addEventListener("click", (e) => {
+    if (e.target.id === "media-lightbox") closeLightbox();
   });
 }
 
@@ -152,10 +218,15 @@ function wireAudioInput() {
       return;
     }
     audioState.newFile = file;
-    const preview = $("#audio-current-preview");
-    preview.src = URL.createObjectURL(file);
-    preview.classList.remove("hidden");
-    $("#audio-pending-label").classList.remove("hidden");
+    audioState.removed = false; // picking a new file supersedes a pending removal
+    renderAudioUI();
+  });
+
+  $("#audio-remove-btn").addEventListener("click", () => {
+    audioState.newFile = null;
+    audioState.removed = true;
+    $("#audio-file-input").value = "";
+    renderAudioUI();
   });
 }
 
@@ -188,7 +259,10 @@ function wireFinalSave() {
         updatedAt: serverTimestamp(),
       });
 
-      if (audioState.newFile) {
+      if (audioState.removed && audioState.existingUrl) {
+        status.textContent = "Removing voice note…";
+        await deleteDoc(doc(db, "badgePageAudio", "main"));
+      } else if (audioState.newFile) {
         status.textContent = "Uploading voice note…";
         const { url, publicId } = await uploadToCloudinary(audioState.newFile, "video");
         await setDoc(doc(db, "badgePageAudio", "main"), { url, publicId, updatedAt: serverTimestamp() });
@@ -212,6 +286,7 @@ function init() {
   wireMediaInput();
   wireAudioInput();
   wireFinalSave();
+  wireLightbox();
 }
 
 document.addEventListener("DOMContentLoaded", init);

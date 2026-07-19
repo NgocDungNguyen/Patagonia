@@ -32,8 +32,8 @@
         .brutal-shadow-rust { box-shadow: 8px 8px 0px 0px #D85A1E; }
         .hover-press { transition: all 0.1s ease; }
         .hover-press:hover { transform: translate(4px, 4px); box-shadow: 4px 4px 0px 0px #1F3A2E; }
-        .gallery-tile { position: relative; aspect-ratio: 1; border: 2px solid #1F3A2E; background: #F5F1E8; overflow: hidden; }
-        .gallery-tile img, .gallery-tile video { width: 100%; height: 100%; object-fit: cover; }
+        .gallery-tile { position: relative; aspect-ratio: 1; border: 2px solid #1F3A2E; background: #C9A77A; overflow: hidden; }
+        .gallery-tile img, .gallery-tile video { width: 100%; height: 100%; object-fit: contain; cursor: pointer; }
         .gallery-remove-btn { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; background: #D85A1E; color: #F5F1E8; border: 2px solid #F5F1E8; font-weight: 700; font-size: 13px; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .gallery-new-badge { position: absolute; bottom: 4px; left: 4px; background: #D85A1E; color: #F5F1E8; font-family: 'JetBrains Mono', monospace; font-size: 9px; text-transform: uppercase; padding: 2px 5px; }
         .gallery-add-tile {
@@ -92,13 +92,24 @@
             <p class="text-pine/60 text-sm font-medium mb-4">Choosing a new file replaces the current one when you Save.</p>
             <audio id="audio-current-preview" controls class="hidden w-full mb-4"></audio>
             <p id="audio-pending-label" class="hidden font-mono text-xs text-rust uppercase tracking-widest mb-3">New file staged — will replace on Save</p>
-            <input id="audio-file-input" type="file" accept="audio/*" class="w-full text-sm font-bold text-pine file:mr-4 file:py-2 file:px-4 file:border-2 file:border-pine file:bg-tan file:font-mono file:text-xs file:uppercase">
+            <p id="audio-removed-label" class="hidden font-mono text-xs text-rust uppercase tracking-widest mb-3">Voice note will be removed on Save</p>
+            <div class="flex flex-wrap items-center gap-3">
+                <input id="audio-file-input" type="file" accept="audio/*" class="flex-1 min-w-[200px] text-sm font-bold text-pine file:mr-4 file:py-2 file:px-4 file:border-2 file:border-pine file:bg-tan file:font-mono file:text-xs file:uppercase">
+                <button id="audio-remove-btn" type="button" class="hidden font-mono text-xs uppercase tracking-widest text-rust underline">Remove Voice Note</button>
+            </div>
         </section>
 
         <div class="text-center">
             <button id="final-save-btn" type="button" class="bg-rust text-bone font-black uppercase tracking-widest text-lg px-10 py-4 brutal-border hover-press">Save All Changes</button>
             <p id="save-status" class="mt-4 font-mono text-xs uppercase tracking-widest text-pine/70"></p>
         </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div id="media-lightbox" class="hidden fixed inset-0 bg-pine/95 z-50 items-center justify-center p-4 sm:p-8">
+        <button id="lightbox-close" class="absolute top-4 right-4 sm:top-6 sm:right-6 bg-bone text-pine brutal-border w-10 h-10 flex items-center justify-center font-black text-xl hover:bg-rust hover:text-bone transition-colors z-10">✕</button>
+        <img id="lightbox-img" class="hidden max-w-full max-h-full object-contain" alt="Full size view">
+        <video id="lightbox-video" class="hidden max-w-full max-h-full" controls playsinline></video>
     </div>
 
     <script type="module" src="admin-panel.js"></script>
