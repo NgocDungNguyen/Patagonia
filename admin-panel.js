@@ -6,6 +6,7 @@ import {
 import { uploadToCloudinary } from "./cloudinary-upload.js";
 
 const $ = (sel) => document.querySelector(sel);
+const uid = () => `new-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 
 function showError(msg) {
   const el = $("#login-error");
@@ -45,9 +46,7 @@ function wireLogin() {
     if (user && user.email === ADMIN_EMAIL) {
       $("#login-screen").classList.add("hidden");
       $("#admin-dashboard").classList.remove("hidden");
-      loadMedia();
-      loadStory();
-      loadAudio();
+      loadDraftState();
     } else {
       $("#login-screen").classList.remove("hidden");
       $("#admin-dashboard").classList.add("hidden");
@@ -55,148 +54,164 @@ function wireLogin() {
   });
 }
 
-// ---------- Media (carousel) ----------
-async function loadMedia() {
-  const list = $("#media-list");
-  list.innerHTML = `<p class="text-pine/50 text-sm font-bold">Loading…</p>`;
+// ---------- Draft state ----------
+// Nothing here touches Firestore/Cloudinary until "Save All Changes" is
+// clicked — everything below just builds up an in-memory draft.
+let mediaItems = []; // { id, kind: 'existing'|'new', type, url|previewUrl, publicId?, file?, removed? }
+const audioState = { existingUrl: null, existingPublicId: null, newFile: null };
+
+async function loadDraftState() {
   const snap = await getDocs(query(collection(db, "badgePageMedia"), orderBy("createdAt", "desc")));
-  const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  if (!items.length) {
-    list.innerHTML = `<p class="text-pine/50 text-sm font-bold">No media uploaded yet.</p>`;
-    return;
-  }
-  list.innerHTML = items.map((m) => `
-    <div class="flex items-center gap-3 bg-bone border-2 border-pine p-3">
-      ${m.type === "video"
-        ? `<video src="${m.url}" class="w-16 h-16 object-cover border-2 border-pine" muted></video>`
-        : `<img src="${m.url}" class="w-16 h-16 object-cover border-2 border-pine" alt="Media">`}
-      <span class="flex-1 font-mono text-xs text-pine/70 uppercase truncate">${m.type}</span>
-      <button data-id="${m.id}" class="media-delete-btn font-mono text-xs text-rust uppercase underline">Remove</button>
-    </div>`).join("");
-  list.querySelectorAll(".media-delete-btn").forEach((btn) => {
-    btn.addEventListener("click", () => deleteMedia(btn.dataset.id));
-  });
-}
+  mediaItems = snap.docs.map((d) => ({ id: d.id, kind: "existing", ...d.data() }));
+  renderGallery();
 
-// Note: this only unlists the item from the site (deletes the Firestore
-// doc). The underlying file stays in your Cloudinary media library — an
-// unsigned client can upload to Cloudinary but can't safely delete from it
-// (that requires the API secret, which must never live in browser code).
-// Clean up unused files from cloudinary.com's Media Library if it matters.
-async function deleteMedia(id) {
-  if (!confirm("Remove this item from the site? (The file will still exist in your Cloudinary library.)")) return;
-  await deleteDoc(doc(db, "badgePageMedia", id));
-  loadMedia();
-}
+  const storySnap = await getDoc(doc(db, "badgePageStory", "main"));
+  $("#story-textarea").value = storySnap.exists() ? storySnap.data().text || "" : "";
 
-function wireMediaUpload() {
-  $("#media-upload-btn").addEventListener("click", async () => {
-    const input = $("#media-upload-input");
-    const file = input.files[0];
-    if (!file) return;
-    const isVideo = file.type.startsWith("video/");
-    const isImage = file.type.startsWith("image/");
-    if (!isVideo && !isImage) { alert("Please choose an image or video file."); return; }
-
-    const btn = $("#media-upload-btn");
-    btn.disabled = true;
-    btn.textContent = "Uploading…";
-    try {
-      const { url, publicId } = await uploadToCloudinary(file, isVideo ? "video" : "image");
-      await addDoc(collection(db, "badgePageMedia"), {
-        type: isVideo ? "video" : "image",
-        url,
-        publicId,
-        createdAt: serverTimestamp(),
-      });
-      input.value = "";
-      await loadMedia();
-    } catch (err) {
-      console.error("Media upload failed:", err);
-      alert(err.message || "Upload failed. Check the console for details.");
-    } finally {
-      btn.disabled = false;
-      btn.textContent = "Upload";
-    }
-  });
-}
-
-// ---------- Story ----------
-async function loadStory() {
-  const snap = await getDoc(doc(db, "badgePageStory", "main"));
-  $("#story-textarea").value = snap.exists() ? snap.data().text || "" : "";
-}
-
-function wireStory() {
-  $("#story-save-btn").addEventListener("click", async () => {
-    const btn = $("#story-save-btn");
-    btn.disabled = true;
-    btn.textContent = "Saving…";
-    try {
-      await setDoc(doc(db, "badgePageStory", "main"), {
-        text: $("#story-textarea").value,
-        updatedAt: serverTimestamp(),
-      });
-      btn.textContent = "Saved ✓";
-    } catch (err) {
-      console.error("Story save failed:", err);
-      btn.textContent = "Save Story";
-      alert("Save failed. Check the console for details.");
-    } finally {
-      btn.disabled = false;
-      setTimeout(() => { btn.textContent = "Save Story"; }, 1500);
-    }
-  });
-}
-
-// ---------- Audio ----------
-async function loadAudio() {
-  const snap = await getDoc(doc(db, "badgePageAudio", "main"));
+  audioState.existingUrl = null;
+  audioState.existingPublicId = null;
+  audioState.newFile = null;
+  const audioSnap = await getDoc(doc(db, "badgePageAudio", "main"));
   const preview = $("#audio-current-preview");
-  if (snap.exists() && snap.data().url) {
-    preview.src = snap.data().url;
+  $("#audio-pending-label").classList.add("hidden");
+  $("#audio-file-input").value = "";
+  if (audioSnap.exists() && audioSnap.data().url) {
+    audioState.existingUrl = audioSnap.data().url;
+    audioState.existingPublicId = audioSnap.data().publicId;
+    preview.src = audioState.existingUrl;
     preview.classList.remove("hidden");
   } else {
     preview.classList.add("hidden");
   }
 }
 
-function wireAudioUpload() {
-  $("#audio-upload-btn").addEventListener("click", async () => {
-    const input = $("#audio-upload-input");
-    const file = input.files[0];
-    if (!file) return;
-    if (!file.type.startsWith("audio/")) { alert("Please choose an audio file (MP3)."); return; }
+// ---------- Media gallery ----------
+function renderGallery() {
+  const gallery = $("#media-gallery");
+  const visible = mediaItems.filter((m) => !m.removed);
 
-    const btn = $("#audio-upload-btn");
+  gallery.innerHTML = visible.map((m) => {
+    const src = m.kind === "new" ? m.previewUrl : m.url;
+    const media = m.type === "video"
+      ? `<video src="${src}" muted></video>`
+      : `<img src="${src}" alt="Media">`;
+    return `
+      <div class="gallery-tile">
+        ${media}
+        <button data-id="${m.id}" class="gallery-remove-btn" type="button" aria-label="Remove">×</button>
+        ${m.kind === "new" ? '<span class="gallery-new-badge">New</span>' : ""}
+      </div>`;
+  }).join("") + `<button id="media-add-tile" type="button" class="gallery-add-tile">+</button>`;
+
+  $("#media-add-tile").addEventListener("click", () => $("#media-file-input").click());
+  gallery.querySelectorAll(".gallery-remove-btn").forEach((btn) => {
+    btn.addEventListener("click", () => removeMediaItem(btn.dataset.id));
+  });
+}
+
+function removeMediaItem(id) {
+  const item = mediaItems.find((m) => m.id === id);
+  if (!item) return;
+  if (item.kind === "new") {
+    URL.revokeObjectURL(item.previewUrl);
+    mediaItems = mediaItems.filter((m) => m.id !== id);
+  } else {
+    item.removed = true; // deleted from Firestore only when Save is clicked
+  }
+  renderGallery();
+}
+
+function wireMediaInput() {
+  $("#media-file-input").addEventListener("change", (e) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach((file) => {
+      const isVideo = file.type.startsWith("video/");
+      const isImage = file.type.startsWith("image/");
+      if (!isVideo && !isImage) return;
+      mediaItems.push({
+        id: uid(),
+        kind: "new",
+        type: isVideo ? "video" : "image",
+        file,
+        previewUrl: URL.createObjectURL(file),
+      });
+    });
+    e.target.value = "";
+    renderGallery();
+  });
+}
+
+// ---------- Audio staging ----------
+function wireAudioInput() {
+  $("#audio-file-input").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith("audio/")) {
+      alert("Please choose an audio file.");
+      e.target.value = "";
+      return;
+    }
+    audioState.newFile = file;
+    const preview = $("#audio-current-preview");
+    preview.src = URL.createObjectURL(file);
+    preview.classList.remove("hidden");
+    $("#audio-pending-label").classList.remove("hidden");
+  });
+}
+
+// ---------- Save everything at once ----------
+function wireFinalSave() {
+  $("#final-save-btn").addEventListener("click", async () => {
+    const btn = $("#final-save-btn");
+    const status = $("#save-status");
     btn.disabled = true;
-    btn.textContent = "Uploading…";
+
     try {
-      // Cloudinary has no distinct "audio" resource type — it goes through
-      // the video upload endpoint, which handles audio-only files fine.
-      const { url, publicId } = await uploadToCloudinary(file, "video");
-      await setDoc(doc(db, "badgePageAudio", "main"), {
-        url,
-        publicId,
+      const toDelete = mediaItems.filter((m) => m.kind === "existing" && m.removed);
+      for (const item of toDelete) {
+        status.textContent = "Removing media…";
+        await deleteDoc(doc(db, "badgePageMedia", item.id));
+      }
+
+      const toUpload = mediaItems.filter((m) => m.kind === "new");
+      for (const item of toUpload) {
+        status.textContent = `Uploading ${item.file.name}…`;
+        const { url, publicId } = await uploadToCloudinary(item.file, item.type);
+        await addDoc(collection(db, "badgePageMedia"), {
+          type: item.type, url, publicId, createdAt: serverTimestamp(),
+        });
+      }
+
+      status.textContent = "Saving story…";
+      await setDoc(doc(db, "badgePageStory", "main"), {
+        text: $("#story-textarea").value,
         updatedAt: serverTimestamp(),
       });
-      input.value = "";
-      await loadAudio();
+
+      if (audioState.newFile) {
+        status.textContent = "Uploading voice note…";
+        const { url, publicId } = await uploadToCloudinary(audioState.newFile, "video");
+        await setDoc(doc(db, "badgePageAudio", "main"), { url, publicId, updatedAt: serverTimestamp() });
+      }
+
+      status.textContent = "All changes saved ✓";
+      await loadDraftState();
     } catch (err) {
-      console.error("Audio upload failed:", err);
-      alert(err.message || "Upload failed. Check the console for details.");
+      console.error("Save failed:", err);
+      status.textContent = "";
+      alert(err.message || "Save failed. Check the console for details.");
     } finally {
       btn.disabled = false;
-      btn.textContent = "Upload / Replace";
+      setTimeout(() => { status.textContent = ""; }, 3000);
     }
   });
 }
 
 function init() {
   wireLogin();
-  wireMediaUpload();
-  wireStory();
-  wireAudioUpload();
+  wireMediaInput();
+  wireAudioInput();
+  wireFinalSave();
 }
 
 document.addEventListener("DOMContentLoaded", init);

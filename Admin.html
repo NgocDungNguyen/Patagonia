@@ -32,6 +32,15 @@
         .brutal-shadow-rust { box-shadow: 8px 8px 0px 0px #D85A1E; }
         .hover-press { transition: all 0.1s ease; }
         .hover-press:hover { transform: translate(4px, 4px); box-shadow: 4px 4px 0px 0px #1F3A2E; }
+        .gallery-tile { position: relative; aspect-ratio: 1; border: 2px solid #1F3A2E; background: #F5F1E8; overflow: hidden; }
+        .gallery-tile img, .gallery-tile video { width: 100%; height: 100%; object-fit: cover; }
+        .gallery-remove-btn { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; background: #D85A1E; color: #F5F1E8; border: 2px solid #F5F1E8; font-weight: 700; font-size: 13px; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .gallery-new-badge { position: absolute; bottom: 4px; left: 4px; background: #D85A1E; color: #F5F1E8; font-family: 'JetBrains Mono', monospace; font-size: 9px; text-transform: uppercase; padding: 2px 5px; }
+        .gallery-add-tile {
+            aspect-ratio: 1; border: 2px dashed rgba(31,58,46,0.4); display: flex; align-items: center; justify-content: center;
+            color: rgba(31,58,46,0.4); font-size: 2rem; font-weight: 900; cursor: pointer; transition: all 0.15s ease; background: transparent;
+        }
+        .gallery-add-tile:hover { border-color: #D85A1E; color: #D85A1E; }
     </style>
 </head>
 <body class="font-manrope antialiased min-h-screen">
@@ -65,31 +74,31 @@
 
         <!-- Media Manager -->
         <section class="bg-bone brutal-border brutal-shadow p-5 sm:p-8 mb-10">
-            <h2 class="font-fraunces text-2xl font-black text-pine mb-4">Carousel Media</h2>
-            <div class="flex flex-wrap gap-3 mb-6">
-                <input id="media-upload-input" type="file" accept="image/*,video/*" class="flex-1 min-w-[200px] text-sm font-bold text-pine file:mr-4 file:py-2 file:px-4 file:border-2 file:border-pine file:bg-tan file:font-mono file:text-xs file:uppercase">
-                <button id="media-upload-btn" type="button" class="bg-rust text-bone font-mono text-xs uppercase tracking-widest px-6 py-3 border-2 border-rust">Upload</button>
-            </div>
-            <div id="media-list" class="space-y-3"></div>
+            <h2 class="font-fraunces text-2xl font-black text-pine mb-2">Carousel Media</h2>
+            <p class="text-pine/60 text-sm font-medium mb-4">Add as many photos/videos as you like. Nothing uploads until you hit Save at the bottom.</p>
+            <div id="media-gallery" class="grid grid-cols-3 sm:grid-cols-4 gap-3"></div>
+            <input id="media-file-input" type="file" accept="image/*,video/*" multiple class="hidden">
         </section>
 
         <!-- Story Editor -->
         <section class="bg-bone brutal-border brutal-shadow p-5 sm:p-8 mb-10">
             <h2 class="font-fraunces text-2xl font-black text-pine mb-4">Story / Note</h2>
             <textarea id="story-textarea" rows="6" placeholder="Write your story, note, or diary entry…" class="w-full brutal-border border-pine p-4 bg-bone focus:outline-none focus:border-rust font-manrope"></textarea>
-            <button id="story-save-btn" type="button" class="mt-4 bg-pine text-bone font-mono text-xs uppercase tracking-widest px-6 py-3 border-2 border-pine">Save Story</button>
         </section>
 
         <!-- Audio Manager -->
-        <section class="bg-bone brutal-border brutal-shadow p-5 sm:p-8">
+        <section class="bg-bone brutal-border brutal-shadow p-5 sm:p-8 mb-10">
             <h2 class="font-fraunces text-2xl font-black text-pine mb-4">Voice Note (MP3)</h2>
-            <p class="text-pine/60 text-sm font-medium mb-4">Uploading a new file replaces the current one.</p>
+            <p class="text-pine/60 text-sm font-medium mb-4">Choosing a new file replaces the current one when you Save.</p>
             <audio id="audio-current-preview" controls class="hidden w-full mb-4"></audio>
-            <div class="flex flex-wrap gap-3">
-                <input id="audio-upload-input" type="file" accept="audio/*" class="flex-1 min-w-[200px] text-sm font-bold text-pine file:mr-4 file:py-2 file:px-4 file:border-2 file:border-pine file:bg-tan file:font-mono file:text-xs file:uppercase">
-                <button id="audio-upload-btn" type="button" class="bg-rust text-bone font-mono text-xs uppercase tracking-widest px-6 py-3 border-2 border-rust">Upload / Replace</button>
-            </div>
+            <p id="audio-pending-label" class="hidden font-mono text-xs text-rust uppercase tracking-widest mb-3">New file staged — will replace on Save</p>
+            <input id="audio-file-input" type="file" accept="audio/*" class="w-full text-sm font-bold text-pine file:mr-4 file:py-2 file:px-4 file:border-2 file:border-pine file:bg-tan file:font-mono file:text-xs file:uppercase">
         </section>
+
+        <div class="text-center">
+            <button id="final-save-btn" type="button" class="bg-rust text-bone font-black uppercase tracking-widest text-lg px-10 py-4 brutal-border hover-press">Save All Changes</button>
+            <p id="save-status" class="mt-4 font-mono text-xs uppercase tracking-widest text-pine/70"></p>
+        </div>
     </div>
 
     <script type="module" src="admin-panel.js"></script>
