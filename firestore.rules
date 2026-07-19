@@ -1,0 +1,121 @@
+rules_version = '2';
+
+// ============================================================
+// Proof of Wear × Patagonia — Firestore Security Rules
+//
+// Collections:
+//   badges          — public gallery data (safe to read/list by anyone).
+//                     Creating a badge is allowed with validation; the
+//                     ONLY field anyone is ever allowed to update after
+//                     creation is `votes`, and only by +1 at a time.
+//   badgeSubmissions — holds the creator's email + name tied to a badge.
+//                     Create-only, NEVER readable by clients. This is the
+//                     admin-only contact list (view it in the Firebase
+//                     console, not in the app — no admin UI exists yet).
+//   voteMarkers     — one doc per voter (doc ID = a random voterId
+//                     generated client-side and stored in localStorage).
+//                     Creating a second marker for the same voterId is
+//                     rejected, which is what makes "one vote per
+//                     browser" hold up even across page reloads.
+// ============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isValidBadge(data) {
+      return data.keys().hasOnly(['name', 'creatorName', 'imageData', 'shape', 'votes', 'createdAt'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 60
+        && data.creatorName is string && data.creatorName.size() > 0 && data.creatorName.size() <= 60
+        && data.imageData is string && data.imageData.size() > 0 && data.imageData.size() < 900000
+        && data.shape in ['circle', 'rectangle', 'square', 'diamond']
+        && data.votes == 0
+        && data.createdAt == request.time;
+    }
+
+    match /badges/{badgeId} {
+      allow read: if true;
+      allow create: if isValidBadge(request.resource.data);
+      // Only the `votes` field may ever change, and only by exactly +1 —
+      // this is what stops anyone from PATCHing an arbitrary vote count.
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes'])
+        && request.resource.data.votes == resource.data.votes + 1;
+      allow delete: if false;
+    }
+
+    match /badgeSubmissions/{submissionId} {
+      allow read: if false; // admin reads this in the Firebase console only
+      allow create: if request.resource.data.keys().hasOnly(['badgeId', 'badgeName', 'creatorName', 'creatorEmail', 'createdAt'])
+        && request.resource.data.badgeId is string && request.resource.data.badgeId.size() > 0
+        && request.resource.data.badgeName is string && request.resource.data.badgeName.size() <= 60
+        && request.resource.data.creatorName is string && request.resource.data.creatorName.size() <= 60
+        && request.resource.data.creatorEmail is string
+        && request.resource.data.creatorEmail.matches('^[^@\\s]+@[^@\\s]+[.][^@\\s]+$')
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    match /voteMarkers/{voterId} {
+      allow read: if false;
+      // A marker doc ID IS the voterId, so this only succeeds the FIRST
+      // time a given browser (localStorage voterId) tries to vote.
+      allow create: if !exists(/databases/$(database)/documents/voteMarkers/$(voterId))
+        && request.resource.data.keys().hasOnly(['badgeId', 'votedAt'])
+        && request.resource.data.badgeId is string
+        && request.resource.data.votedAt == request.time;
+      allow update, delete: if false;
+    }
+
+    // ------------------------------------------------------------
+    // Badge.html / Admin.html — the media carousel, story block, and
+    // voice-note audio shown on the public Badge page. All three are
+    // publicly readable but only writable by the one signed-in admin
+    // account (created manually in Firebase Auth — see Admin.html setup).
+    //
+    // The actual image/video/audio files live on Cloudinary (not Firebase
+    // Storage, which now requires the paid Blaze plan) — these documents
+    // only ever hold the resulting Cloudinary URL + publicId.
+    // ------------------------------------------------------------
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'admin@patagonia-a86db.firebaseapp.com';
+    }
+
+    function isCloudinaryUrl(url) {
+      return url.matches('^https://res[.]cloudinary[.]com/.*');
+    }
+
+    match /badgePageMedia/{mediaId} {
+      allow read: if true;
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['type', 'url', 'publicId', 'createdAt'])
+        && request.resource.data.type in ['image', 'video']
+        && request.resource.data.url is string && isCloudinaryUrl(request.resource.data.url)
+        && request.resource.data.publicId is string
+        && request.resource.data.createdAt == request.time;
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
+    match /badgePageStory/{docId} {
+      allow read: if true;
+      allow write: if isAdmin()
+        && request.resource.data.keys().hasOnly(['text', 'updatedAt'])
+        && request.resource.data.text is string && request.resource.data.text.size() <= 5000
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    match /badgePageAudio/{docId} {
+      allow read: if true;
+      allow write: if isAdmin()
+        && request.resource.data.keys().hasOnly(['url', 'publicId', 'updatedAt'])
+        && request.resource.data.url is string && isCloudinaryUrl(request.resource.data.url)
+        && request.resource.data.publicId is string
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    // Deny everything else by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

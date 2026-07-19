@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>The Story Wall — Proof of Wear × Patagonia</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,900;1,9..144,900&family=JetBrains+Mono:wght@400;700&family=Manrope:wght@400;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { 'bone': '#F5F1E8', 'pine': '#1F3A2E', 'rust': '#D85A1E', 'tan': '#C9A77A' },
+                    fontFamily: {
+                        'fraunces': ['Fraunces', 'serif'],
+                        'manrope': ['Manrope', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #F5F1E8; color: #1F3A2E; overflow-x: hidden; }
+        .brutal-border { border: 3px solid #1F3A2E; }
+        .brutal-shadow { box-shadow: 8px 8px 0px 0px #1F3A2E; }
+        .brutal-shadow-rust { box-shadow: 8px 8px 0px 0px #D85A1E; }
+        .brutal-shadow-bone { box-shadow: 8px 8px 0px 0px #F5F1E8; }
+        .hover-press { transition: all 0.1s ease; }
+        .hover-press:hover { transform: translate(4px, 4px); box-shadow: 4px 4px 0px 0px #1F3A2E; }
+        .swiper-slide { width: 82%; opacity: 0.4; transition: opacity 0.3s; }
+        .swiper-slide-active { opacity: 1; }
+        .swiper-pagination-bullet { background: #1F3A2E; opacity: 0.3; width: 20px; height: 4px; border-radius: 0; }
+        .swiper-pagination-bullet-active { background: #D85A1E; opacity: 1; }
+        #audio-play-btn { width: 64px; height: 64px; border-radius: 50%; }
+    </style>
+</head>
+<body class="font-manrope antialiased">
+
+    <header class="px-6 pt-12 pb-6 text-center">
+        <a href="index.html" class="font-mono text-xs text-pine/50 uppercase tracking-widest underline underline-offset-4 hover:text-rust transition-colors">← Back to Site</a>
+        <div class="font-mono text-xs tracking-widest text-rust mt-6 mb-4 uppercase">The Story Wall</div>
+        <h1 class="font-fraunces text-4xl sm:text-6xl font-black text-pine leading-none">EVERY REPAIR<br>HAS A STORY.</h1>
+    </header>
+
+    <!-- Carousel -->
+    <section class="px-6 py-12">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex justify-end gap-2 mb-6">
+                <button id="carousel-prev" class="w-10 h-10 brutal-border bg-bone flex items-center justify-center hover-press font-bold">←</button>
+                <button id="carousel-next" class="w-10 h-10 brutal-border bg-rust text-bone flex items-center justify-center hover-press font-bold">→</button>
+            </div>
+            <div class="swiper">
+                <div id="carousel-wrapper" class="swiper-wrapper pb-10">
+                    <div class="swiper-slide"><div class="brutal-border bg-bone flex items-center justify-center h-[320px] sm:h-[420px]"><p class="text-center text-pine/50 font-bold uppercase tracking-widest">Loading…</p></div></div>
+                </div>
+                <div class="swiper-pagination mt-6 relative"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Story -->
+    <section class="px-6 py-16 bg-pine text-bone">
+        <div class="max-w-2xl mx-auto text-center">
+            <div class="font-mono text-xs tracking-widest text-rust mb-4 uppercase">A Note</div>
+            <p id="story-text" class="font-fraunces italic text-xl sm:text-2xl leading-relaxed">Loading…</p>
+        </div>
+    </section>
+
+    <!-- Audio -->
+    <section class="px-6 py-16">
+        <div class="max-w-xl mx-auto text-center">
+            <div class="font-mono text-xs tracking-widest text-rust mb-6 uppercase">A Voice</div>
+
+            <div id="audio-player-controls" class="bg-bone brutal-border brutal-shadow p-6 sm:p-8">
+                <canvas id="audio-visualizer" width="400" height="100" class="w-full h-[100px] mb-6"></canvas>
+                <button id="audio-play-btn" class="bg-rust text-bone font-black text-xl mx-auto flex items-center justify-center brutal-border hover-press">►</button>
+                <audio id="audio-el" class="hidden"></audio>
+            </div>
+            <p id="audio-empty-notice" class="hidden text-pine/50 font-bold uppercase tracking-widest text-sm py-8">No voice note shared yet.</p>
+        </div>
+    </section>
+
+    <script type="module" src="badge-page.js"></script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Admin — Proof of Wear × Patagonia</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,900;1,9..144,900&family=JetBrains+Mono:wght@400;700&family=Manrope:wght@400;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { 'bone': '#F5F1E8', 'pine': '#1F3A2E', 'rust': '#D85A1E', 'tan': '#C9A77A' },
+                    fontFamily: {
+                        'fraunces': ['Fraunces', 'serif'],
+                        'manrope': ['Manrope', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #F5F1E8; color: #1F3A2E; }
+        .brutal-border { border: 3px solid #1F3A2E; }
+        .brutal-shadow { box-shadow: 8px 8px 0px 0px #1F3A2E; }
+        .brutal-shadow-rust { box-shadow: 8px 8px 0px 0px #D85A1E; }
+        .hover-press { transition: all 0.1s ease; }
+        .hover-press:hover { transform: translate(4px, 4px); box-shadow: 4px 4px 0px 0px #1F3A2E; }
+    </style>
+</head>
+<body class="font-manrope antialiased min-h-screen">
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-bone brutal-border brutal-shadow p-6 sm:p-8">
+            <div class="font-mono text-xs text-rust mb-2 uppercase tracking-widest">Restricted</div>
+            <h1 class="font-fraunces text-3xl font-black text-pine mb-6">Admin Login</h1>
+            <form id="login-form" class="flex flex-col gap-4">
+                <label class="block">
+                    <span class="font-mono text-xs uppercase tracking-widest text-pine/70">Username</span>
+                    <input id="login-username" type="text" autocomplete="username" required class="mt-1 w-full brutal-border border-pine p-3 bg-bone focus:outline-none focus:border-rust font-bold">
+                </label>
+                <label class="block">
+                    <span class="font-mono text-xs uppercase tracking-widest text-pine/70">Password</span>
+                    <input id="login-password" type="password" autocomplete="current-password" required class="mt-1 w-full brutal-border border-pine p-3 bg-bone focus:outline-none focus:border-rust font-bold">
+                </label>
+                <p id="login-error" class="hidden text-rust font-bold text-sm">Invalid username or password.</p>
+                <button type="submit" class="bg-pine text-bone font-black uppercase tracking-widest p-4 mt-2 brutal-border hover-press">Log In</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="admin-dashboard" class="hidden max-w-4xl mx-auto px-6 py-12">
+        <div class="flex items-center justify-between mb-10">
+            <h1 class="font-fraunces text-3xl sm:text-4xl font-black text-pine">Badge Page Admin</h1>
+            <button id="logout-btn" class="font-mono text-xs uppercase tracking-widest text-rust underline">Log Out</button>
+        </div>
+
+        <!-- Media Manager -->
+        <section class="bg-bone brutal-border brutal-shadow p-5 sm:p-8 mb-10">
+            <h2 class="font-fraunces text-2xl font-black text-pine mb-4">Carousel Media</h2>
+            <div class="flex flex-wrap gap-3 mb-6">
+                <input id="media-upload-input" type="file" accept="image/*,video/*" class="flex-1 min-w-[200px] text-sm font-bold text-pine file:mr-4 file:py-2 file:px-4 file:border-2 file:border-pine file:bg-tan file:font-mono file:text-xs file:uppercase">
+                <button id="media-upload-btn" type="button" class="bg-rust text-bone font-mono text-xs uppercase tracking-widest px-6 py-3 border-2 border-rust">Upload</button>
+            </div>
+            <div id="media-list" class="space-y-3"></div>
+        </section>
+
+        <!-- Story Editor -->
+        <section class="bg-bone brutal-border brutal-shadow p-5 sm:p-8 mb-10">
+            <h2 class="font-fraunces text-2xl font-black text-pine mb-4">Story / Note</h2>
+            <textarea id="story-textarea" rows="6" placeholder="Write your story, note, or diary entry…" class="w-full brutal-border border-pine p-4 bg-bone focus:outline-none focus:border-rust font-manrope"></textarea>
+            <button id="story-save-btn" type="button" class="mt-4 bg-pine text-bone font-mono text-xs uppercase tracking-widest px-6 py-3 border-2 border-pine">Save Story</button>
+        </section>
+
+        <!-- Audio Manager -->
+        <section class="bg-bone brutal-border brutal-shadow p-5 sm:p-8">
+            <h2 class="font-fraunces text-2xl font-black text-pine mb-4">Voice Note (MP3)</h2>
+            <p class="text-pine/60 text-sm font-medium mb-4">Uploading a new file replaces the current one.</p>
+            <audio id="audio-current-preview" controls class="hidden w-full mb-4"></audio>
+            <div class="flex flex-wrap gap-3">
+                <input id="audio-upload-input" type="file" accept="audio/*" class="flex-1 min-w-[200px] text-sm font-bold text-pine file:mr-4 file:py-2 file:px-4 file:border-2 file:border-pine file:bg-tan file:font-mono file:text-xs file:uppercase">
+                <button id="audio-upload-btn" type="button" class="bg-rust text-bone font-mono text-xs uppercase tracking-widest px-6 py-3 border-2 border-rust">Upload / Replace</button>
+            </div>
+        </section>
+    </div>
+
+    <script type="module" src="admin-panel.js"></script>
+</body>
+</html>
