@@ -3,10 +3,10 @@ import {
   serverTimestamp, writeBatch, increment,
 } from "./firebase-init.js";
 
+const VOTER_ID_KEY = "pow_voter_id";
 const VOTED_BADGE_KEY = "pow_voted_badge_id";
 const TOP_N = 5;
 const rowRotate = (i) => (i % 2 === 0 ? "rotate-1" : "rotate-2");
-let pendingVoteBadgeId = null;
 
 function escapeHtml(str) {
   return String(str)
@@ -17,11 +17,13 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
-async function hashEmail(email) {
-  const normalized = email.trim().toLowerCase();
-  const encoded = new TextEncoder().encode(normalized);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
-  return Array.from(new Uint8Array(hashBuffer)).map((b) => b.toString(16).padStart(2, "0")).join("");
+function getVoterId() {
+  let id = localStorage.getItem(VOTER_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    localStorage.setItem(VOTER_ID_KEY, id);
+  }
+  return id;
 }
 
 function hasVoted() {
@@ -73,43 +75,7 @@ function renderRows(container, badges, { showVote }) {
   container.innerHTML = badges.map((b, i) => rowTemplate(b, i + 1, maxVotes, showVote)).join("");
   if (showVote) {
     container.querySelectorAll(".vote-btn").forEach((btn) => {
-      btn.addEventListener("click", () => openVoteEmailModal(btn.dataset.badgeId));
-    });
-  }
-}
-
-function openVoteEmailModal(badgeId) {
-  pendingVoteBadgeId = badgeId;
-  document.getElementById("vote-email-error").classList.add("hidden");
-  document.getElementById("vote-email-input").value = "";
-  const modal = document.getElementById("vote-email-modal");
-  modal.classList.remove("hidden-transition");
-  modal.classList.add("visible-transition");
-}
-
-function closeVoteEmailModal() {
-  const modal = document.getElementById("vote-email-modal");
-  modal.classList.add("hidden-transition");
-  modal.classList.remove("visible-transition");
-  pendingVoteBadgeId = null;
-}
-
-function wireVoteEmailModal() {
-  const cancelBtn = document.getElementById("vote-email-cancel");
-  const form = document.getElementById("vote-email-form");
-  if (cancelBtn) cancelBtn.addEventListener("click", closeVoteEmailModal);
-  if (form) {
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const email = document.getElementById("vote-email-input").value;
-      const badgeId = pendingVoteBadgeId;
-      const submitBtn = form.querySelector("button[type=submit]");
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Casting…";
-      const ok = await castVote(badgeId, email);
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Confirm Vote";
-      if (ok) closeVoteEmailModal();
+      btn.addEventListener("click", () => castVote(btn.dataset.badgeId));
     });
   }
 }
@@ -123,15 +89,12 @@ function showVotedNotice(message) {
   document.querySelectorAll(".vote-btn").forEach((btn) => btn.remove());
 }
 
-async function castVote(badgeId, email) {
-  if (hasVoted() || !badgeId || !email) return false;
+async function castVote(badgeId) {
+  if (hasVoted()) return;
+  document.querySelectorAll(".vote-btn").forEach((btn) => (btn.disabled = true));
 
-  // The vote-marker doc ID is a hash of the voter's email, not a random
-  // client-generated ID — this is what makes "already voted" durable across
-  // reloads/devices/cleared storage: it only resets if a different email is
-  // used, not whenever local browser storage happens to get wiped.
-  const voterHash = await hashEmail(email);
-  const markerRef = doc(db, "voteMarkers", voterHash);
+  const voterId = getVoterId();
+  const markerRef = doc(db, "voteMarkers", voterId);
   const badgeRef = doc(db, "badges", badgeId);
   const batch = writeBatch(db);
   batch.set(markerRef, { badgeId, votedAt: serverTimestamp() });
@@ -142,12 +105,11 @@ async function castVote(badgeId, email) {
     localStorage.setItem(VOTED_BADGE_KEY, badgeId);
     showVotedNotice();
     await refreshLeaderboard();
-    return true;
   } catch (err) {
-    // Marker already existed for this email's hash — genuinely already voted.
-    document.getElementById("vote-email-error").classList.remove("hidden");
+    // Marker already existed (already voted from this browser before) or a rules rejection.
+    localStorage.setItem(VOTED_BADGE_KEY, badgeId);
+    showVotedNotice("You've already voted in this browser.");
     console.warn("Vote failed:", err);
-    return false;
   }
 }
 
@@ -183,7 +145,6 @@ function wireShowMore() {
 
 export async function initChosenBadge() {
   wireShowMore();
-  wireVoteEmailModal();
   if (hasVoted()) showVotedNotice("You've already voted — thanks!");
   await refreshLeaderboard();
 }

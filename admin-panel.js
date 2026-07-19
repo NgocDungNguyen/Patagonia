@@ -1,12 +1,20 @@
 import {
   db, auth, ADMIN_EMAIL,
-  collection, doc, addDoc, setDoc, deleteDoc, getDoc, getDocs, query, orderBy, serverTimestamp,
+  collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, query, orderBy, serverTimestamp,
   signInWithEmailAndPassword, onAuthStateChanged, signOut,
 } from "./firebase-init.js";
 import { uploadToCloudinary } from "./cloudinary-upload.js";
 
 const $ = (sel) => document.querySelector(sel);
 const uid = () => `new-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+
+function escapeAttr(str) {
+  return String(str || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
 
 function showError(msg) {
   const el = $("#login-error");
@@ -47,6 +55,7 @@ function wireLogin() {
       $("#login-screen").classList.add("hidden");
       $("#admin-dashboard").classList.remove("hidden");
       loadDraftState();
+      loadBadgeManageList();
     } else {
       $("#login-screen").classList.remove("hidden");
       $("#admin-dashboard").classList.add("hidden");
@@ -279,6 +288,86 @@ function wireFinalSave() {
       setTimeout(() => { status.textContent = ""; }, 3000);
     }
   });
+}
+
+// ---------- Manage submitted badges (community leaderboard) ----------
+// This is a different collection from everything above — it's the public
+// contest data shown in "The Chosen Badge" on the main site, not the
+// Badge.html story-wall content. Edits/deletes here apply immediately.
+async function loadBadgeManageList() {
+  const list = $("#badge-manage-list");
+  list.innerHTML = `<p class="text-pine/50 text-sm font-bold">Loading…</p>`;
+  const snap = await getDocs(query(collection(db, "badges"), orderBy("votes", "desc")));
+  const badges = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+  if (!badges.length) {
+    list.innerHTML = `<p class="text-pine/50 text-sm font-bold">No badges submitted yet.</p>`;
+    return;
+  }
+
+  list.innerHTML = badges.map((b) => `
+    <div class="grid grid-cols-2 sm:grid-cols-[56px_1fr_1fr_90px_auto_auto] gap-3 items-end bg-tan border-2 border-pine p-3" data-row-id="${b.id}">
+      <img src="${b.imageData}" class="w-14 h-14 rounded-full border-2 border-pine object-cover bg-bone" alt="Badge">
+      <label class="block col-span-2 sm:col-span-1">
+        <span class="font-mono uppercase text-pine/60 text-[10px]">Name</span>
+        <input type="text" value="${escapeAttr(b.name)}" data-field="name" class="w-full border-2 border-pine p-2 bg-bone font-bold text-sm mt-1">
+      </label>
+      <label class="block col-span-2 sm:col-span-1">
+        <span class="font-mono uppercase text-pine/60 text-[10px]">Creator</span>
+        <input type="text" value="${escapeAttr(b.creatorName)}" data-field="creatorName" class="w-full border-2 border-pine p-2 bg-bone font-bold text-sm mt-1">
+      </label>
+      <label class="block">
+        <span class="font-mono uppercase text-pine/60 text-[10px]">Votes</span>
+        <input type="number" min="0" step="1" value="${b.votes || 0}" data-field="votes" class="w-full border-2 border-pine p-2 bg-bone font-bold text-sm mt-1">
+      </label>
+      <button type="button" class="badge-save-btn bg-pine text-bone font-mono text-xs uppercase px-3 py-2 border-2 border-pine h-[38px]" data-id="${b.id}">Save</button>
+      <button type="button" class="badge-delete-btn font-mono text-xs uppercase text-rust underline h-[38px]" data-id="${b.id}">Delete</button>
+    </div>`).join("");
+
+  list.querySelectorAll(".badge-save-btn").forEach((btn) => {
+    btn.addEventListener("click", () => saveBadgeRow(btn.dataset.id));
+  });
+  list.querySelectorAll(".badge-delete-btn").forEach((btn) => {
+    btn.addEventListener("click", () => deleteBadgeRow(btn.dataset.id));
+  });
+}
+
+async function saveBadgeRow(id) {
+  const row = document.querySelector(`[data-row-id="${id}"]`);
+  const name = row.querySelector('[data-field="name"]').value.trim();
+  const creatorName = row.querySelector('[data-field="creatorName"]').value.trim();
+  const votes = parseInt(row.querySelector('[data-field="votes"]').value, 10);
+
+  if (!name || !creatorName || Number.isNaN(votes) || votes < 0) {
+    alert("Please fill in a name, creator name, and a non-negative vote count.");
+    return;
+  }
+
+  const btn = row.querySelector(".badge-save-btn");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+  try {
+    await updateDoc(doc(db, "badges", id), { name, creatorName, votes });
+    btn.textContent = "Saved ✓";
+  } catch (err) {
+    console.error("Badge update failed:", err);
+    alert(err.message || "Update failed. Check the console for details.");
+    btn.textContent = "Save";
+  } finally {
+    btn.disabled = false;
+    setTimeout(() => { btn.textContent = "Save"; }, 1500);
+  }
+}
+
+async function deleteBadgeRow(id) {
+  if (!confirm("Delete this badge entirely? This cannot be undone.")) return;
+  try {
+    await deleteDoc(doc(db, "badges", id));
+    await loadBadgeManageList();
+  } catch (err) {
+    console.error("Badge delete failed:", err);
+    alert(err.message || "Delete failed. Check the console for details.");
+  }
 }
 
 function init() {

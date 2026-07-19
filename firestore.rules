@@ -5,9 +5,11 @@ rules_version = '2';
 //
 // Collections:
 //   badges          — public gallery data (safe to read/list by anyone).
-//                     Creating a badge is allowed with validation; the
-//                     ONLY field anyone is ever allowed to update after
-//                     creation is `votes`, and only by +1 at a time.
+//                     Creating a badge is allowed with validation. A
+//                     signed-in visitor voting can only ever change `votes`
+//                     by +1. The signed-in admin (Admin.html) can fully
+//                     edit or delete any badge, including setting votes to
+//                     an arbitrary number.
 //   badgeSubmissions — holds the creator's email + name tied to a badge.
 //                     Create-only, NEVER readable by clients. This is the
 //                     admin-only contact list (view it in the Firebase
@@ -32,14 +34,28 @@ service cloud.firestore {
         && data.createdAt == request.time;
     }
 
+    // Admin editing an existing badge (name/creatorName/votes) — image,
+    // shape, and createdAt stay fixed to whatever they already were.
+    function isValidAdminBadgeEdit(data, existing) {
+      return data.keys().hasOnly(['name', 'creatorName', 'imageData', 'shape', 'votes', 'createdAt'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 60
+        && data.creatorName is string && data.creatorName.size() > 0 && data.creatorName.size() <= 60
+        && data.imageData == existing.imageData
+        && data.shape == existing.shape
+        && data.votes is int && data.votes >= 0
+        && data.createdAt == existing.createdAt;
+    }
+
     match /badges/{badgeId} {
       allow read: if true;
       allow create: if isValidBadge(request.resource.data);
-      // Only the `votes` field may ever change, and only by exactly +1 —
-      // this is what stops anyone from PATCHing an arbitrary vote count.
-      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes'])
-        && request.resource.data.votes == resource.data.votes + 1;
-      allow delete: if false;
+      allow update: if
+        // Voting: only `votes` may change, and only by exactly +1.
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes'])
+          && request.resource.data.votes == resource.data.votes + 1)
+        // Admin: full edit of name/creatorName/votes (any non-negative value).
+        || (isAdmin() && isValidAdminBadgeEdit(request.resource.data, resource.data));
+      allow delete: if isAdmin();
     }
 
     match /badgeSubmissions/{submissionId} {
