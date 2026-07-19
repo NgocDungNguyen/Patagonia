@@ -851,6 +851,22 @@
         </div>
     </div>
 
+    <!-- Vote Email Confirm Modal -->
+    <div id="vote-email-modal" class="fixed inset-0 bg-pine/90 backdrop-blur-sm z-40 hidden-transition flex items-center justify-center p-4">
+        <div class="bg-bone brutal-border brutal-shadow-rust max-w-sm w-full p-6 sm:p-8" onclick="event.stopPropagation()">
+            <h3 class="font-fraunces text-2xl font-black text-pine mb-2">One Quick Step</h3>
+            <p class="text-pine/70 text-sm font-medium mb-4">Enter your email to cast your vote. It's only used to make sure each person votes once — never shown publicly, never emailed.</p>
+            <form id="vote-email-form" class="flex flex-col gap-3">
+                <input id="vote-email-input" type="email" required placeholder="you@email.com" class="brutal-border border-pine p-3 bg-bone font-bold focus:outline-none focus:border-rust">
+                <p id="vote-email-error" class="hidden text-rust font-bold text-sm">This email has already voted.</p>
+                <div class="flex gap-2">
+                    <button type="button" id="vote-email-cancel" class="flex-1 font-mono text-xs uppercase tracking-widest text-pine px-4 py-3 border-2 border-pine">Cancel</button>
+                    <button type="submit" class="flex-1 bg-rust text-bone font-mono text-xs uppercase tracking-widest px-4 py-3 border-2 border-rust">Confirm Vote</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         // =========================================
         // 00: ENVELOPE LOGIC
