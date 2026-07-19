@@ -14,5 +14,5 @@
 //      actually enforced, since Firestore never sees the raw file.
 //   4. Copy the preset name below.
 
-export const CLOUDINARY_CLOUD_NAME = "YOUR_CLOUD_NAME";
-export const CLOUDINARY_UPLOAD_PRESET = "YOUR_UNSIGNED_UPLOAD_PRESET";
+export const CLOUDINARY_CLOUD_NAME = "myvfbj2h";
+export const CLOUDINARY_UPLOAD_PRESET = "Patagonia";
