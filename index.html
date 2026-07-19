@@ -64,12 +64,39 @@
         .marquee span { display: inline-block; animation: marquee 20s linear infinite; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
-        /* Envelope */
-        .envelope-wrap { perspective: 1000px; }
-        .envelope-flap { transform-origin: top; transition: transform 0.8s ease-in-out; z-index: 10; }
-        .envelope-open .envelope-flap { transform: rotateX(180deg); }
-        .letter { transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease; }
-        .envelope-open .letter { transform: translateY(-150%) scale(1.1); opacity: 0; }
+        /* =========================================
+           00 · ENVELOPE (Realistic 3D Layered)
+           ========================================= */
+        .env-wrap { position: relative; width: 100%; max-width: 400px; height: 280px; perspective: 1000px; margin: 0 auto; cursor: pointer; }
+        .env-back { position: absolute; inset: 0; background: #C9A77A; border: 3px solid #1F3A2E; z-index: 1; box-shadow: 8px 8px 0px 0px #F5F1E8; }
+        .env-letter { 
+            position: absolute; top: 15px; left: 20px; right: 20px; bottom: 20px; 
+            background: #F5F1E8; border: 3px solid #1F3A2E; padding: 20px; z-index: 2; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+            transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.3s, opacity 0.3s ease 1.6s;
+        }
+        .envelope-open .env-letter { transform: translateY(-140%); opacity: 0; }
+        .env-front { 
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 75%; background: #C9A77A; z-index: 3; 
+            clip-path: polygon(0 35%, 50% 100%, 100% 35%, 100% 100%, 0 100%); 
+            border-bottom: 3px solid #1F3A2E; border-left: 3px solid #1F3A2E; border-right: 3px solid #1F3A2E;
+        }
+        .env-flap { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 50%; background: #C9A77A; z-index: 4; 
+            clip-path: polygon(0 0, 100% 0, 50% 100%); 
+            border-bottom: 3px solid #1F3A2E;
+            transform-origin: top; transition: transform 0.6s ease-in-out, z-index 0s 0.3s; 
+        }
+        .envelope-open .env-flap { transform: rotateX(180deg); z-index: 0; }
+        .wax-seal { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); 
+            width: 70px; height: 70px; background: #D85A1E; border-radius: 50%; 
+            border: 3px solid #1F3A2E; box-shadow: 4px 4px 0px 0px #F5F1E8; z-index: 5; 
+            display: flex; align-items: center; justify-content: center; 
+            font-family: 'Fraunces', serif; font-weight: 900; color: #F5F1E8; font-size: 1.2rem; 
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .envelope-open .wax-seal { opacity: 0; transform: translate(-50%, -50%) rotate(0deg) scale(0.8); }
 
         /* Carousel */
         .swiper-slide { width: 80%; opacity: 0.4; transition: opacity 0.3s; }
@@ -91,7 +118,6 @@
         /* Hover Effects */
         .hover-press { transition: all 0.1s ease; }
         .hover-press:hover { transform: translate(4px, 4px); box-shadow: 4px 4px 0px 0px #1F3A2E; }
-        .hover-press-rust:hover { transform: translate(4px, 4px); box-shadow: 4px 4px 0px 0px #D85A1E; }
 
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #F5F1E8; }
@@ -104,31 +130,24 @@
     <!-- 00 · ENVELOPE (Entry Interaction)         -->
     <!-- ========================================= -->
     <div id="envelope-overlay" class="fixed inset-0 z-50 bg-pine flex flex-col items-center justify-center p-4">
-        <div class="text-center mb-8 font-mono text-xs tracking-[0.3em] text-bone/70 uppercase">
+        <div class="text-center mb-12 font-mono text-xs tracking-[0.3em] text-bone/70 uppercase">
             To: You · Status: Unopened
         </div>
         
-        <div id="envelope" class="envelope-wrap w-full max-w-md relative cursor-pointer" onclick="openEnvelope()">
-            <!-- Flap -->
-            <div class="envelope-flap absolute top-0 left-0 w-full h-1/2 bg-tan" style="clip-path: polygon(0 0, 100% 0, 50% 100%); border-bottom: 3px solid #1F3A2E;"></div>
-            
-            <!-- Body -->
-            <div class="relative w-full h-64 bg-tan brutal-border brutal-shadow flex items-center justify-center overflow-hidden">
-                <div class="absolute w-full top-1/2 border-t-2 border-dashed border-pine/50 transform -translate-y-1/2"></div>
-                <div class="absolute w-20 h-20 bg-rust rounded-full flex items-center justify-center text-bone font-fraunces font-black text-xl brutal-border brutal-shadow-bone rotate-2">
-                    P.o.W
-                </div>
-                
-                <!-- Letter -->
-                <div class="letter absolute w-[90%] h-[90%] bg-bone brutal-border p-6 flex flex-col justify-center text-center rotate-1">
-                    <p class="font-fraunces italic text-xl text-pine leading-snug mb-4">Hey — remember that jacket you can't quite bring yourself to throw away?</p>
-                    <p class="font-manrope text-sm text-pine/80 font-bold">We're not asking you to buy a new one. Bring it back to life.</p>
-                    <p class="mt-6 font-mono text-xs text-rust uppercase tracking-widest border-2 border-rust inline-block px-3 py-1 self-center">Tap to Open</p>
-                </div>
+        <div id="envelope" class="env-wrap" onclick="openEnvelope()">
+            <div class="env-back"></div>
+            <div class="env-letter">
+                <p class="font-fraunces italic text-xl text-pine leading-snug mb-4">Hey — remember that jacket you can't quite bring yourself to throw away?</p>
+                <p class="font-manrope text-sm text-pine/80 font-bold mb-6">We're not asking you to buy a new one. Bring it back to life.</p>
+                <div class="font-mono text-xs text-rust uppercase tracking-widest border-2 border-rust inline-block px-3 py-1">Proof of Wear</div>
             </div>
+            <div class="env-front"></div>
+            <div class="env-flap"></div>
+            <div class="wax-seal">P.o.W</div>
         </div>
 
-        <button onclick="skipEnvelope()" class="mt-12 font-mono text-xs text-bone/50 underline underline-offset-4 hover:text-rust transition-colors uppercase tracking-widest">
+        <p class="mt-10 font-mono text-xs text-bone/50 uppercase tracking-widest animate-pulse">Click Envelope to Open</p>
+        <button onclick="skipEnvelope()" class="mt-4 font-mono text-xs text-bone/30 underline underline-offset-4 hover:text-rust transition-colors uppercase tracking-widest">
             Skip Intro
         </button>
     </div>
@@ -202,12 +221,22 @@
                         It’s a repair event. But really, it’s a love letter to the things we refuse to throw away. Bring that jacket, those jeans, the backpack holding on by a thread. No pressure to buy. Just bring the item, sit at a table, and keep your full story — no need to trade it for something new.
                     </p>
                 </div>
+                
+                <!-- Image Box Setup for Section 2 -->
                 <div class="flex-1 w-full">
-                    <div class="relative group">
-                        <div class="absolute -inset-2 bg-rust rotate-2 transition-transform group-hover:rotate-3"></div>
-                        <img src="https://images.unsplash.com/photo-1620754715565-4ea0c96ab90c?q=80&w=2574&auto=format&fit=crop" class="relative w-full aspect-square object-cover brutal-border" alt="Mending hands">
-                        <div class="absolute bottom-4 left-4 bg-bone text-pine px-3 py-1 font-mono text-xs font-bold uppercase tracking-widest">
-                            ITEM_NO. 042
+                    <div class="relative group bg-bone p-3 brutal-border brutal-shadow-rust rotate-1">
+                        <div class="corner-bracket cb-tl"></div>
+                        <div class="corner-bracket cb-tr"></div>
+                        <div class="corner-bracket cb-bl"></div>
+                        <div class="corner-bracket cb-br"></div>
+                        
+                        <div class="relative w-full aspect-square bg-tan overflow-hidden border-2 border-pine">
+                            <img src="https://images.unsplash.com/photo-1620754715565-4ea0c96ab90c?q=80&w=800&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover" alt="Mending hands">
+                        </div>
+                        
+                        <div class="mt-3 px-2 pb-1 flex justify-between items-center">
+                            <div class="font-mono text-xs text-pine/70 uppercase tracking-widest font-bold">FIG_01 // MENDING</div>
+                            <div class="bg-rust text-bone px-2 py-1 font-mono text-[10px] font-bold">LIVE</div>
                         </div>
                     </div>
                 </div>
@@ -234,54 +263,153 @@
                     <div class="swiper-wrapper pb-12">
                         <!-- Slide 1 -->
                         <div class="swiper-slide">
-                            <div class="relative h-[450px] brutal-border brutal-shadow cursor-pointer group" onclick="openModal('Mending + Storytelling', 'Sit at the table that matches your story.', 'We have 4 tables: Vết Tích (The Mark), Bạn Đồng Hành (The Companion), Đường Đi (The Journey), and Đời Thường (The Everyday). Pick the one that fits your item best. What does done look like? A patched hole and a great conversation.', 'https://images.unsplash.com/photo-1597452485644-d2a09c75c69e?q=80&w=2574&auto=format&fit=crop')">
-                                <img src="https://images.unsplash.com/photo-1597452485644-d2a09c75c69e?q=80&w=2574&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover" alt="Mending">
-                                <div class="absolute inset-0 bg-gradient-to-t from-pine/90 to-transparent"></div>
-                                <div class="relative h-full p-6 flex flex-col justify-end text-bone">
-                                    <div class="font-mono text-xs text-rust mb-2 bg-bone px-2 py-1 inline-block w-fit text-pine font-bold">01/04</div>
-                                    <h3 class="font-fraunces text-3xl font-black mb-2">Mending + Storytelling</h3>
-                                    <p class="font-manrope text-sm font-bold opacity-80">Sit at the table that matches your story.</p>
+                            <div class="brutal-border brutal-shadow bg-bone h-[480px] flex flex-col cursor-pointer group" onclick="openModal('Mending + Storytelling', 'Sit at the table that matches your story.', 'We have 4 tables: Vết Tích, Bạn Đồng Hành, Đường Đi, and Đời Thường. Pick the one that fits your item best. What does done look like? A patched hole and a great conversation.', 'https://images.unsplash.com/photo-1597452485644-d2a09c75c69e?q=80&w=800&auto=format&fit=crop')">
+                                <div class="relative h-60 bg-tan overflow-hidden border-b-4 border-pine">
+                                    <img src="https://images.unsplash.com/photo-1597452485644-d2a09c75c69e?q=80&w=800&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt="Mending">
+                                    <div class="absolute top-3 left-3 bg-bone px-2 py-1 font-mono text-xs font-bold text-pine border-2 border-pine">01/04</div>
+                                </div>
+                                <div class="p-6 flex-1 flex flex-col justify-end">
+                                    <h3 class="font-fraunces text-3xl font-black mb-2 text-pine">Mending + Storytelling</h3>
+                                    <p class="font-manrope text-sm font-bold text-pine/70">Sit at the table that matches your story.</p>
                                 </div>
                             </div>
                         </div>
                         <!-- Slide 2 -->
                         <div class="swiper-slide">
-                            <div class="relative h-[450px] brutal-border brutal-shadow cursor-pointer group" onclick="openModal('Repair Quest', 'You cannot solve this alone. That is the point.', 'Four stations. Four puzzles. You and your team need to hit each station to figure out how to save the sample item. It takes communication and a bit of sweat. Win the quest, win a prize.', 'https://images.unsplash.com/photo-1581090700227-1e37b190418e?q=80&w=2574&auto=format&fit=crop')">
-                                <img src="https://images.unsplash.com/photo-1581090700227-1e37b190418e?q=80&w=2574&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover" alt="Quest">
-                                <div class="absolute inset-0 bg-gradient-to-t from-pine/90 to-transparent"></div>
-                                <div class="relative h-full p-6 flex flex-col justify-end text-bone">
-                                    <div class="font-mono text-xs text-rust mb-2 bg-bone px-2 py-1 inline-block w-fit text-pine font-bold">02/04</div>
-                                    <h3 class="font-fraunces text-3xl font-black mb-2">Repair Quest</h3>
-                                    <p class="font-manrope text-sm font-bold opacity-80">You can't solve this alone. That's the point.</p>
+                            <div class="brutal-border brutal-shadow bg-bone h-[480px] flex flex-col cursor-pointer group" onclick="openModal('Repair Quest', 'You cannot solve this alone. That is the point.', 'Four stations. Four puzzles. You and your team need to hit each station to figure out how to save the sample item. It takes communication and a bit of sweat. Win the quest, win a prize.', 'https://images.unsplash.com/photo-1551632811-561732d1e306?q=80&w=800&auto=format&fit=crop')">
+                                <div class="relative h-60 bg-tan overflow-hidden border-b-4 border-pine">
+                                    <img src="https://images.unsplash.com/photo-1551632811-561732d1e306?q=80&w=800&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt="Quest">
+                                    <div class="absolute top-3 left-3 bg-bone px-2 py-1 font-mono text-xs font-bold text-pine border-2 border-pine">02/04</div>
+                                </div>
+                                <div class="p-6 flex-1 flex flex-col justify-end">
+                                    <h3 class="font-fraunces text-3xl font-black mb-2 text-pine">Repair Quest</h3>
+                                    <p class="font-manrope text-sm font-bold text-pine/70">You can't solve this alone. That's the point.</p>
                                 </div>
                             </div>
                         </div>
                         <!-- Slide 3 -->
                         <div class="swiper-slide">
-                            <div class="relative h-[450px] brutal-border brutal-shadow cursor-pointer group" onclick="openModal('Voice-Memo Booth', 'Your voice becomes part of the item forever.', 'Step into the booth. Hit record. Tell us the story of what you brought. We will stitch that audio to a QR code and sew it right onto your item. Scan it years from now to hear yourself.', 'https://images.unsplash.com/photo-1598488035136-b9b84e1a1b0c?q=80&w=2574&auto=format&fit=crop')">
-                                <img src="https://images.unsplash.com/photo-1598488035136-b9b84e1a1b0c?q=80&w=2574&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover" alt="Booth">
-                                <div class="absolute inset-0 bg-gradient-to-t from-pine/90 to-transparent"></div>
-                                <div class="relative h-full p-6 flex flex-col justify-end text-bone">
-                                    <div class="font-mono text-xs text-rust mb-2 bg-bone px-2 py-1 inline-block w-fit text-pine font-bold">03/04</div>
-                                    <h3 class="font-fraunces text-3xl font-black mb-2">Voice-Memo Booth</h3>
-                                    <p class="font-manrope text-sm font-bold opacity-80">Your voice becomes part of the item forever.</p>
+                            <div class="brutal-border brutal-shadow bg-bone h-[480px] flex flex-col cursor-pointer group" onclick="openModal('Voice-Memo Booth', 'Your voice becomes part of the item forever.', 'Step into the booth. Hit record. Tell us the story of what you brought. We will stitch that audio to a QR code and sew it right onto your item. Scan it years from now to hear yourself.', 'https://images.unsplash.com/photo-1598488035136-b9b84e1a1b0c?q=80&w=800&auto=format&fit=crop')">
+                                <div class="relative h-60 bg-tan overflow-hidden border-b-4 border-pine">
+                                    <img src="https://images.unsplash.com/photo-1598488035136-b9b84e1a1b0c?q=80&w=800&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt="Booth">
+                                    <div class="absolute top-3 left-3 bg-bone px-2 py-1 font-mono text-xs font-bold text-pine border-2 border-pine">03/04</div>
+                                </div>
+                                <div class="p-6 flex-1 flex flex-col justify-end">
+                                    <h3 class="font-fraunces text-3xl font-black mb-2 text-pine">Voice-Memo Booth</h3>
+                                    <p class="font-manrope text-sm font-bold text-pine/70">Your voice becomes part of the item forever.</p>
                                 </div>
                             </div>
                         </div>
                         <!-- Slide 4 -->
                         <div class="swiper-slide">
-                            <div class="relative h-[450px] brutal-border brutal-shadow cursor-pointer group" onclick="openModal('Limited Patch + Lucky Draw', 'Show up, you are already in the running.', 'We made a custom Patagonia x Proof of Wear patch. Only 50 exist. You cannot buy them. Just by showing up, you are entered to win one. No purchase necessary.', 'https://images.unsplash.com/photo-1606041008023-472dfb5e530f?q=80&w=2574&auto=format&fit=crop')">
-                                <img src="https://images.unsplash.com/photo-1606041008023-472dfb5e530f?q=80&w=2574&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover" alt="Patch">
-                                <div class="absolute inset-0 bg-gradient-to-t from-pine/90 to-transparent"></div>
-                                <div class="relative h-full p-6 flex flex-col justify-end text-bone">
-                                    <div class="font-mono text-xs text-rust mb-2 bg-bone px-2 py-1 inline-block w-fit text-pine font-bold">04/04</div>
-                                    <h3 class="font-fraunces text-3xl font-black mb-2">Limited Patch</h3>
-                                    <p class="font-manrope text-sm font-bold opacity-80">Show up, you're already in the running.</p>
+                            <div class="brutal-border brutal-shadow bg-bone h-[480px] flex flex-col cursor-pointer group" onclick="openModal('Limited Patch + Lucky Draw', 'Show up, you are already in the running.', 'We made a custom Patagonia x Proof of Wear patch. Only 50 exist. You cannot buy them. Just by showing up, you are entered to win one. No purchase necessary.', 'https://images.unsplash.com/photo-1606041008023-472dfb5e530f?q=80&w=800&auto=format&fit=crop')">
+                                <div class="relative h-60 bg-tan overflow-hidden border-b-4 border-pine">
+                                    <img src="https://images.unsplash.com/photo-1606041008023-472dfb5e530f?q=80&w=800&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" alt="Patch">
+                                    <div class="absolute top-3 left-3 bg-bone px-2 py-1 font-mono text-xs font-bold text-pine border-2 border-pine">04/04</div>
+                                </div>
+                                <div class="p-6 flex-1 flex flex-col justify-end">
+                                    <h3 class="font-fraunces text-3xl font-black mb-2 text-pine">Limited Patch</h3>
+                                    <p class="font-manrope text-sm font-bold text-pine/70">Show up, you're already in the running.</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="swiper-pagination mt-8 relative"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================= -->
+        <!-- 03.5 · THE CHOSEN BADGE (New Section)     -->
+        <!-- ========================================= -->
+        <section id="chosen-badge" class="px-6 py-24 bg-bone border-t-4 border-b-4 border-pine">
+            <div class="max-w-4xl mx-auto">
+                <div class="text-center mb-12">
+                    <div class="font-mono text-xs tracking-widest text-rust mb-4 uppercase">SEC_03.5 · Community Vote</div>
+                    <h2 class="font-fraunces text-5xl md:text-7xl font-black text-pine leading-none mb-4">THE CHOSEN BADGE.</h2>
+                    <p class="text-pine/70 font-bold uppercase tracking-widest text-sm">Top 5 designs. You decide what gets made.</p>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Rank 1 -->
+                    <div class="flex items-center gap-4 md:gap-6 bg-tan brutal-border p-4 rotate-1">
+                        <div class="font-fraunces text-3xl md:text-5xl font-black w-10 md:w-16 text-center text-rust">01</div>
+                        <img src="https://images.unsplash.com/photo-1611652022419-a9419f74343d?q=80&w=200&auto=format&fit=crop" class="w-16 h-16 md:w-20 md:h-20 rounded-full brutal-border object-cover" alt="Badge 1">
+                        <div class="flex-1">
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-fraunces text-xl md:text-2xl font-black text-pine">Sashiko Trail</span>
+                                <span class="font-mono text-sm font-bold text-pine">842 Votes</span>
+                            </div>
+                            <div class="h-4 bg-pine/10 brutal-border border-pine w-full">
+                                <div class="h-full bg-rust" style="width: 85%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Rank 2 -->
+                    <div class="flex items-center gap-4 md:gap-6 bg-tan brutal-border p-4 rotate-2">
+                        <div class="font-fraunces text-3xl md:text-5xl font-black w-10 md:w-16 text-center text-pine">02</div>
+                        <img src="https://images.unsplash.com/photo-1551632811-561732d1e306?q=80&w=200&auto=format&fit=crop" class="w-16 h-16 md:w-20 md:h-20 rounded-full brutal-border object-cover" alt="Badge 2">
+                        <div class="flex-1">
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-fraunces text-xl md:text-2xl font-black text-pine">Memory Map</span>
+                                <span class="font-mono text-sm font-bold text-pine">612 Votes</span>
+                            </div>
+                            <div class="h-4 bg-pine/10 brutal-border border-pine w-full">
+                                <div class="h-full bg-pine" style="width: 62%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Rank 3 -->
+                    <div class="flex items-center gap-4 md:gap-6 bg-tan brutal-border p-4 rotate-1">
+                        <div class="font-fraunces text-3xl md:text-5xl font-black w-10 md:w-16 text-center text-pine">03</div>
+                        <img src="https://images.unsplash.com/photo-1503602642458-232111445657?q=80&w=200&auto=format&fit=crop" class="w-16 h-16 md:w-20 md:h-20 rounded-full brutal-border object-cover" alt="Badge 3">
+                        <div class="flex-1">
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-fraunces text-xl md:text-2xl font-black text-pine">Golden Repair</span>
+                                <span class="font-mono text-sm font-bold text-pine">455 Votes</span>
+                            </div>
+                            <div class="h-4 bg-pine/10 brutal-border border-pine w-full">
+                                <div class="h-full bg-pine" style="width: 46%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Rank 4 -->
+                    <div class="flex items-center gap-4 md:gap-6 bg-tan brutal-border p-4 rotate-2">
+                        <div class="font-fraunces text-3xl md:text-5xl font-black w-10 md:w-16 text-center text-pine">04</div>
+                        <img src="https://images.unsplash.com/photo-1525310072745-f49212b5ac6d?q=80&w=200&auto=format&fit=crop" class="w-16 h-16 md:w-20 md:h-20 rounded-full brutal-border object-cover" alt="Badge 4">
+                        <div class="flex-1">
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-fraunces text-xl md:text-2xl font-black text-pine">Field Compass</span>
+                                <span class="font-mono text-sm font-bold text-pine">201 Votes</span>
+                            </div>
+                            <div class="h-4 bg-pine/10 brutal-border border-pine w-full">
+                                <div class="h-full bg-pine/70" style="width: 20%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Rank 5 -->
+                    <div class="flex items-center gap-4 md:gap-6 bg-tan brutal-border p-4 rotate-1">
+                        <div class="font-fraunces text-3xl md:text-5xl font-black w-10 md:w-16 text-center text-pine">05</div>
+                        <img src="https://images.unsplash.com/photo-1567446537708-ac4aa75c9c28?q=80&w=200&auto=format&fit=crop" class="w-16 h-16 md:w-20 md:h-20 rounded-full brutal-border object-cover" alt="Badge 5">
+                        <div class="flex-1">
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="font-fraunces text-xl md:text-2xl font-black text-pine">Worn Wear Tag</span>
+                                <span class="font-mono text-sm font-bold text-pine">88 Votes</span>
+                            </div>
+                            <div class="h-4 bg-pine/10 brutal-border border-pine w-full">
+                                <div class="h-full bg-pine/50" style="width: 8%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-12">
+                    <button class="bg-rust text-bone font-manrope font-black uppercase tracking-widest text-lg px-10 py-4 brutal-border brutal-shadow-pine hover-press">
+                        Submit Your Badge Design Today →
+                    </button>
+                    <p class="mt-6 text-pine/60 text-sm font-medium max-w-md mx-auto">
+                        The winning design won't just live online—it will be produced and available for everyone to buy after the campaign ends. Your art, out in the wild.
+                    </p>
                 </div>
             </div>
         </section>
@@ -503,7 +631,7 @@
                 document.getElementById('envelope-overlay').style.opacity = '0';
                 document.getElementById('envelope-overlay').style.pointerEvents = 'none';
                 document.getElementById('main-content').classList.remove('opacity-0');
-            }, 1200);
+            }, 2000); // Wait for letter to slide out and fade
         }
         function skipEnvelope() {
             document.getElementById('envelope-overlay').style.display = 'none';
@@ -704,7 +832,7 @@
         }
 
         function openPatchModal(patch) {
-            document.getElementById('modal-img').src = 'https://images.unsplash.com/photo-1606041008023-472dfb5e530f?q=80&w=2574&auto=format&fit=crop';
+            document.getElementById('modal-img').src = 'https://images.unsplash.com/photo-1606041008023-472dfb5e530f?q=80&w=800&auto=format&fit=crop';
             document.getElementById('modal-title').innerText = patch.name;
             document.getElementById('modal-teaser').innerText = "ITEM_NO. " + Math.floor(Math.random() * 999);
             document.getElementById('modal-body').innerText = "You found the " + patch.name + " patch. This is part of a limited run. Show up to the event to see it in real life.";
