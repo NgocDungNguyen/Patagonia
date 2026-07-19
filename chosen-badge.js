@@ -91,7 +91,8 @@ function showVotedNotice(message) {
 
 async function castVote(badgeId) {
   if (hasVoted()) return;
-  document.querySelectorAll(".vote-btn").forEach((btn) => (btn.disabled = true));
+  const buttons = document.querySelectorAll(".vote-btn");
+  buttons.forEach((btn) => (btn.disabled = true));
 
   const voterId = getVoterId();
   const markerRef = doc(db, "voteMarkers", voterId);
@@ -106,10 +107,13 @@ async function castVote(badgeId) {
     showVotedNotice();
     await refreshLeaderboard();
   } catch (err) {
-    // Marker already existed (already voted from this browser before) or a rules rejection.
-    localStorage.setItem(VOTED_BADGE_KEY, badgeId);
-    showVotedNotice("You've already voted in this browser.");
-    console.warn("Vote failed:", err);
+    // Don't mark this browser as "voted" here — the write never actually
+    // went through (could be a rules issue, network blip, etc.), and
+    // falsely setting this flag would permanently hide the vote button
+    // even though nothing was ever recorded. Just let them retry.
+    console.error("Vote failed:", err);
+    buttons.forEach((btn) => (btn.disabled = false));
+    alert("Your vote couldn't be saved right now. Please try again in a moment.");
   }
 }
 
@@ -128,16 +132,19 @@ async function refreshLeaderboard() {
 function wireShowMore() {
   const btn = document.getElementById("badge-showmore-btn");
   const wrap = document.getElementById("badge-showmore-wrap");
-  if (!btn || !wrap) return;
+  const top = document.getElementById("badge-leaderboard");
+  if (!btn || !wrap || !top) return;
   btn.addEventListener("click", async () => {
     showingAll = !showingAll;
     if (showingAll) {
+      top.classList.add("hidden"); // replace the top-5 view, don't stack a second list under it
       wrap.classList.remove("hidden");
       btn.textContent = "Show Less ↑";
       const all = document.getElementById("badge-fulllist");
       renderRows(all, await fetchAllBadges(), { showVote: !hasVoted() });
     } else {
       wrap.classList.add("hidden");
+      top.classList.remove("hidden");
       btn.textContent = "Show More ↓";
     }
   });
