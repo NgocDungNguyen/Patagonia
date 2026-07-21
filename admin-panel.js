@@ -66,8 +66,20 @@ function wireLogin() {
 // ---------- Draft state ----------
 // Nothing here touches Firestore/Cloudinary until "Save All Changes" is
 // clicked — everything below just builds up an in-memory draft.
+let currentSite = "badge"; // 'badge' | 'badge1' — which Badge*.html this edits
 let mediaItems = []; // { id, kind: 'existing'|'new', type, url|previewUrl, publicId?, file?, removed? }
 const audioState = { existingUrl: null, existingPublicId: null, newFile: null, removed: false };
+
+function wireSiteTabs() {
+  document.querySelectorAll(".site-tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (btn.dataset.site === currentSite) return;
+      currentSite = btn.dataset.site;
+      document.querySelectorAll(".site-tab-btn").forEach((b) => b.classList.toggle("is-active", b === btn));
+      loadDraftState();
+    });
+  });
+}
 
 function renderAudioUI() {
   const preview = $("#audio-current-preview");
@@ -102,11 +114,15 @@ function renderAudioUI() {
 }
 
 async function loadDraftState() {
+  // Filtered client-side (not via a Firestore `where`) so this never needs
+  // a composite index — fine at the scale these personal pages run at.
   const snap = await getDocs(query(collection(db, "badgePageMedia"), orderBy("createdAt", "desc")));
-  mediaItems = snap.docs.map((d) => ({ id: d.id, kind: "existing", ...d.data() }));
+  mediaItems = snap.docs
+    .map((d) => ({ id: d.id, kind: "existing", ...d.data() }))
+    .filter((m) => m.site === currentSite);
   renderGallery();
 
-  const storySnap = await getDoc(doc(db, "badgePageStory", "main"));
+  const storySnap = await getDoc(doc(db, "badgePageStory", currentSite));
   $("#story-textarea").value = storySnap.exists() ? storySnap.data().text || "" : "";
 
   audioState.existingUrl = null;
@@ -114,7 +130,7 @@ async function loadDraftState() {
   audioState.newFile = null;
   audioState.removed = false;
   $("#audio-file-input").value = "";
-  const audioSnap = await getDoc(doc(db, "badgePageAudio", "main"));
+  const audioSnap = await getDoc(doc(db, "badgePageAudio", currentSite));
   if (audioSnap.exists() && audioSnap.data().url) {
     audioState.existingUrl = audioSnap.data().url;
     audioState.existingPublicId = audioSnap.data().publicId;
@@ -258,23 +274,23 @@ function wireFinalSave() {
         status.textContent = `Uploading ${item.file.name}…`;
         const { url, publicId } = await uploadToCloudinary(item.file, item.type);
         await addDoc(collection(db, "badgePageMedia"), {
-          type: item.type, url, publicId, createdAt: serverTimestamp(),
+          site: currentSite, type: item.type, url, publicId, createdAt: serverTimestamp(),
         });
       }
 
       status.textContent = "Saving story…";
-      await setDoc(doc(db, "badgePageStory", "main"), {
+      await setDoc(doc(db, "badgePageStory", currentSite), {
         text: $("#story-textarea").value,
         updatedAt: serverTimestamp(),
       });
 
       if (audioState.removed && audioState.existingUrl) {
         status.textContent = "Removing voice note…";
-        await deleteDoc(doc(db, "badgePageAudio", "main"));
+        await deleteDoc(doc(db, "badgePageAudio", currentSite));
       } else if (audioState.newFile) {
         status.textContent = "Uploading voice note…";
         const { url, publicId } = await uploadToCloudinary(audioState.newFile, "video");
-        await setDoc(doc(db, "badgePageAudio", "main"), { url, publicId, updatedAt: serverTimestamp() });
+        await setDoc(doc(db, "badgePageAudio", currentSite), { url, publicId, updatedAt: serverTimestamp() });
       }
 
       status.textContent = "All changes saved ✓";
@@ -372,6 +388,7 @@ async function deleteBadgeRow(id) {
 
 function init() {
   wireLogin();
+  wireSiteTabs();
   wireMediaInput();
   wireAudioInput();
   wireFinalSave();

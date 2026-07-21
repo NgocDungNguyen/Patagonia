@@ -1,11 +1,18 @@
 import { db, doc, getDoc, collection, getDocs, query, orderBy } from "./firebase-init.js";
 
+// Each Badge*.html page sets this before loading this script, e.g.
+// <script>window.BADGE_SITE_ID = 'badge1';</script> — lets one shared
+// script serve any number of independent badge-story pages.
+const SITE_ID = window.BADGE_SITE_ID || "badge";
+
 const $ = (sel) => document.querySelector(sel);
 
 async function loadMedia() {
   const wrapper = $("#carousel-wrapper");
+  // Filtered client-side rather than via a Firestore `where` so this never
+  // needs a composite index — fine at the scale a personal page like this runs at.
   const snap = await getDocs(query(collection(db, "badgePageMedia"), orderBy("createdAt", "desc")));
-  const items = snap.docs.map((d) => d.data());
+  const items = snap.docs.map((d) => d.data()).filter((m) => m.site === SITE_ID);
 
   if (!items.length) {
     wrapper.innerHTML = `<div class="swiper-slide"><div class="brutal-border bg-bone flex items-center justify-center h-[320px] sm:h-[420px]"><p class="text-center text-pine/50 font-bold uppercase tracking-widest">No media shared yet.</p></div></div>`;
@@ -73,7 +80,7 @@ function wireLightbox() {
 }
 
 async function loadStory() {
-  const snap = await getDoc(doc(db, "badgePageStory", "main"));
+  const snap = await getDoc(doc(db, "badgePageStory", SITE_ID));
   const text = snap.exists() ? snap.data().text : "";
   $("#story-text").textContent = text && text.trim() ? text : "No story shared yet.";
 }
@@ -110,7 +117,7 @@ function drawVisualizer() {
 }
 
 async function loadAudio() {
-  const snap = await getDoc(doc(db, "badgePageAudio", "main"));
+  const snap = await getDoc(doc(db, "badgePageAudio", SITE_ID));
   if (!snap.exists() || !snap.data().url) {
     $("#audio-empty-notice").classList.remove("hidden");
     $("#audio-player-controls").classList.add("hidden");

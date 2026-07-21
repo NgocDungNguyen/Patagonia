@@ -82,10 +82,16 @@ service cloud.firestore {
     }
 
     // ------------------------------------------------------------
-    // Badge.html / Admin.html — the media carousel, story block, and
-    // voice-note audio shown on the public Badge page. All three are
-    // publicly readable but only writable by the one signed-in admin
-    // account (created manually in Firebase Auth — see Admin.html setup).
+    // Badge.html / Badge1.html / Admin.html — the media carousel, story
+    // block, and voice-note audio shown on each public Badge page. All
+    // three are publicly readable but only writable by the one signed-in
+    // admin account (created manually in Firebase Auth — see Admin.html).
+    //
+    // Multiple badge sites share these same collections: badgePageMedia
+    // docs carry a `site` field ('badge' | 'badge1') that each page
+    // filters by client-side; badgePageStory/badgePageAudio use the site
+    // key itself as the document ID (e.g. badgePageStory/badge1) instead
+    // of a fixed 'main' doc.
     //
     // The actual image/video/audio files live on Cloudinary (not Firebase
     // Storage, which now requires the paid Blaze plan) — these documents
@@ -103,7 +109,8 @@ service cloud.firestore {
     match /badgePageMedia/{mediaId} {
       allow read: if true;
       allow create: if isAdmin()
-        && request.resource.data.keys().hasOnly(['type', 'url', 'publicId', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['site', 'type', 'url', 'publicId', 'createdAt'])
+        && request.resource.data.site in ['badge', 'badge1']
         && request.resource.data.type in ['image', 'video']
         && request.resource.data.url is string && isCloudinaryUrl(request.resource.data.url)
         && request.resource.data.publicId is string
@@ -114,10 +121,11 @@ service cloud.firestore {
 
     match /badgePageStory/{docId} {
       allow read: if true;
-      allow write: if isAdmin()
+      allow create, update: if isAdmin()
         && request.resource.data.keys().hasOnly(['text', 'updatedAt'])
         && request.resource.data.text is string && request.resource.data.text.size() <= 5000
         && request.resource.data.updatedAt == request.time;
+      allow delete: if isAdmin();
     }
 
     match /badgePageAudio/{docId} {

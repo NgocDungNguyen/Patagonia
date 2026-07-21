@@ -13,7 +13,7 @@
         // can't safely coexist with "Admin.html" on a case-insensitive local
         // filesystem like Windows/macOS), this catches the mismatch here and
         // redirects to the correctly-cased page.
-        var knownPages = ['Admin.html', 'Badge.html', 'index.html'];
+        var knownPages = ['Admin.html', 'Badge.html', 'Badge1.html', 'index.html'];
         var path = location.pathname;
         var dir = path.substring(0, path.lastIndexOf('/') + 1);
         var requested = path.substring(path.lastIndexOf('/') + 1).toLowerCase();

@@ -41,6 +41,8 @@
             color: rgba(31,58,46,0.4); font-size: 2rem; font-weight: 900; cursor: pointer; transition: all 0.15s ease; background: transparent;
         }
         .gallery-add-tile:hover { border-color: #D85A1E; color: #D85A1E; }
+        .site-tab-btn { font-family: 'JetBrains Mono', monospace; font-size: 12px; text-transform: uppercase; font-weight: 700; padding: 10px 20px; background: #F5F1E8; border: 2px solid #1F3A2E; color: #1F3A2E; cursor: pointer; }
+        .site-tab-btn.is-active { background: #1F3A2E; color: #F5F1E8; }
     </style>
 </head>
 <body class="font-manrope antialiased min-h-screen">
@@ -80,6 +82,17 @@
                 <p class="text-pine/50 text-sm font-bold">Loading…</p>
             </div>
         </section>
+
+        <!-- Badge Site Switcher — Carousel Media / Story / Voice Note below
+             are per-site; this decides which site's content is loaded/saved. -->
+        <div class="mb-6">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+                <span class="font-mono text-xs uppercase tracking-widest text-pine/60 mr-2">Managing:</span>
+                <button type="button" data-site="badge" class="site-tab-btn is-active">Badge</button>
+                <button type="button" data-site="badge1" class="site-tab-btn">Badge1</button>
+            </div>
+            <p class="text-pine/50 text-xs font-medium">Switching tabs discards any unsaved changes below for the one you're leaving.</p>
+        </div>
 
         <!-- Media Manager -->
         <section class="bg-bone brutal-border brutal-shadow p-5 sm:p-8 mb-10">
